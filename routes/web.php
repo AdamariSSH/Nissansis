@@ -4,6 +4,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Entradas;
 use App\Http\Controllers\Vehiculoscontroller;
 use App\Http\Controllers\Almacencontroller;
+use App\Http\Controllers\SalidaController;
+use App\Http\Controllers\Auth\LoginController;
 use App\Models\Entrada;
 
 Auth::routes();
@@ -15,6 +17,10 @@ Auth::routes();
 Route::get('/', function () {
     return view('auth.login'); // Laravel buscará en resources/views/auth/login.blade.php
 });
+
+
+Route::get('/auth/google', [LoginController::class, 'redirectToGoogle'])->name('login.google');
+Route::get('/auth/google/callback', [LoginController::class, 'handleGoogleCallback']);
 
 
 //-------------------------------------------------------------------------------------------------\\
@@ -98,3 +104,19 @@ Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name
 
 
 
+// //Rutas para ir al blade de salidas
+// Route::group(['prefix' => 'admin', 'middleware' => ['auth']], function() {
+//     Route::get('/salidas', [SalidaController::class, 'index'])->name('admin.salidas');
+// });
+
+
+// Ruta protegida con autenticación
+Route::group(['prefix' => 'admin', 'middleware' => ['auth']], function() {
+    Route::get('/salidas', [SalidaController::class, 'index'])->name('admin.salidas');
+    Route::post('/salidas', [SalidaController::class, 'store'])->name('salidas.store');
+
+    // Ruta para obtener datos de un vehículo por VIN (AJAX)
+    Route::get('/vehiculo/{vin}', function ($vin) {
+        return \App\Models\Vehiculos::where('VIN', $vin)->first();
+    });
+});
