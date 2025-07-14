@@ -120,6 +120,12 @@
                     </div>
 
                     <button type="submit" class="btn btn-danger w-100 fw-bold">Login</button>
+                    <div class="mt-3 text-center">
+                        <a href="{{ route('login.google') }}" class="btn btn-outline-danger w-100 fw-bold">
+                            <i class="fab fa-google me-2"></i> Iniciar sesión con Google
+                        </a>
+                    </div>
+
                 </form>
             </div>
         </div>

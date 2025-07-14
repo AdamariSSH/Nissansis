@@ -29,6 +29,18 @@
                                 <option value="Entregado" {{ request('estado') == 'Entregado' ? 'selected' : '' }}>Entregado</option>
                             </select>
                         </div>
+                        <div class="col-md-3">
+                            <select name="almacen_id" class="form-control">
+                                <option value="">-- Almacén --</option>
+                                @foreach($almacenes as $almacen)
+                                   <option value="{{ $almacen->Id_Almacen }}" {{ request('almacen_id') == $almacen->Id_Almacen ? 'selected' : '' }}>
+                                         {{ $almacen->Nombre }}
+                                    </option>
+
+                                @endforeach
+                            </select>
+                        </div>
+
                     </div>
                     <div class="mt-3">
                         <button type="submit" class="btn btn-primary">🔎 Buscar</button>
@@ -80,16 +92,8 @@
                                         <button class="btn btn-danger btn-sm ml-1" title="Eliminar"><i class="fas fa-trash"></i></button>
                                         <a href="{{ route('vehiculosimprimir', ['No_orden' => $vehiculo->No_orden]) }}" class="btn btn-primary btn-sm">
                                             <i class="fas fa-print"></i>
-                                          </a>
-
                                         </a>
-                                        
                                     </td>
-                                    {{-- <td>
-                                        <a href="#" class="btn btn-warning btn-sm" title="Editar"><i class="fas fa-edit"></i></a>
-                                        <button class="btn btn-danger btn-sm ml-1" title="Eliminar"><i class="fas fa-trash"></i></button>
-                                        
-                                    </td> --}}
                                 </tr>
                             @empty
                                 <tr>
@@ -100,8 +104,10 @@
                     </table>
                 </div>
 
-                {{-- PAGINACIÓN (opcional si usas ->paginate()) --}}
-                {{ $vehiculos->links() }}
+                {{-- PAGINACIÓN BONITA --}}
+                <div class="d-flex justify-content-center mt-4">
+                    {{ $vehiculos->links('pagination::bootstrap-4') }}
+                </div>
 
             </div>
         </div>
