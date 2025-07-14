@@ -345,7 +345,7 @@ return [
         ],
         [
             'text' => 'Salidas',
-            'url' => 'admin/settings',
+            'url' => '/admin/salidas',
             'icon' => 'fas fa-sign-out-alt',
         ],
         [
