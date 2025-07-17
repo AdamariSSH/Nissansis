@@ -2,8 +2,8 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Entradas;
-use App\Http\Controllers\Vehiculoscontroller;
-use App\Http\Controllers\Almacencontroller;
+use App\Http\Controllers\VehiculosController;
+use App\Http\Controllers\AlmacenController;
 use App\Http\Controllers\SalidaController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Models\Entrada;
