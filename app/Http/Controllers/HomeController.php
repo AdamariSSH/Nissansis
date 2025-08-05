@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Almacen;
+use App\Models\Vehiculo;
+
 
 class HomeController extends Controller
 {
@@ -28,7 +30,11 @@ class HomeController extends Controller
     // }
     public function index()
     {
+        $cantidadVehiculos = Vehiculo::count();
+
         $cantidadAlmacenes = Almacen::count(); // Contar almacenes
-        return view('home', compact('cantidadAlmacenes')); // Enviar la variable a la vista
+        // return view('home', compact('cantidadAlmacenes')); // Enviar la variable a la vista
+                return view('home', compact('cantidadVehiculos', 'cantidadAlmacenes'));
+
     }
 }

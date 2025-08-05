@@ -1,230 +1,277 @@
-{{-- @extends('adminlte::page')
+@extends('adminlte::page')
 
 @section('title', 'Crear Entrada')
 
 @section('content_header')
-    <h1>Crear Nueva Entrada</h1>
+    <h1>Crear Entrada de Vehículo</h1>
 @stop
 
 @section('content')
-    <div class="container">
-        <div class="card">
-            <div class="card-header bg-secondary text-white">
-                <h4>Formulario de Nueva Entrada</h4>
+<div class="container-fluid">
+    <form method="POST" action="{{ route('entradas.store') }}">
+        @csrf
+
+        <!-- Paso 1: Datos Generales -->
+        <div class="card card-primary">
+            <div class="card-header" style="background-color: #6b6666;">
+                <h3 class="card-title">Paso 1: Datos Generales</h3>
             </div>
             <div class="card-body">
-                <form action="{{ route('entradas.store') }}" method="POST">
-                    @csrf
-                    <div class="mb-3">
-                        <label for="VIN" class="form-label">VIN</label>
-                        <input type="text" class="form-control" id="VIN" name="VIN" maxlength="17">
+                <div class="row">
+                    <!-- Vehículo -->
+                    <div class="col-md-4">
+                        <x-adminlte-input name="VIN" label="VIN" maxlength="17" required />
                     </div>
-                    >
-                    <div class="mb-3">
-                        <label for="Motor" class="form-label">Motor</label>
-                        <input type="text" class="form-control" id="Motor" name="Motor" maxlength="20">
+                    <div class="col-md-4">
+                        <x-adminlte-input name="Motor" label="Motor"  maxlength="17" required/>
                     </div>
-                    <div class="mb-3">
-                        <label for="Version" class="form-label">Versión</label>
-                        <input type="text" class="form-control" id="Version" name="Version" required>
+                    <div class="col-md-4">
+                        <x-adminlte-input name="Caracteristicas" label="Caracteristicas" required />
                     </div>
-                    <div class="mb-3">
-                        <label for="Color" class="form-label">Color</label>
-                        <input type="text" class="form-control" id="Color" name="Color" required>
+                    <div class="col-md-4">
+                        <x-adminlte-input name="Color" label="Color" required />
                     </div>
-                    <div class="mb-3">
-                        <label for="Modelo" class="form-label">Modelo</label>
-                        <input type="text" class="form-control" id="Modelo" name="Modelo" required>
+                    <div class="col-md-4">
+                        <x-adminlte-input name="Modelo" label="Modelo" required />
                     </div>
+                    <div class="col-md-4">
+                        <x-adminlte-input name="Kilometraje_entrada" label="Kilometraje" type="number" value="0" />
+                    </div>
+                     {{-- <div class="col-md-4">
+                        <x-adminlte-input name="Coordinador_Logistica" label="Coordinador de Logística" required />
+                    </div> --}}
                     
-                    <div class="mb-3">
-                        <label for="Almacen_salida" class="form-label">Almacén salida</label>
-                        <input type="number" class="form-control" id="Almacen_salida" name="Almacen_salida">
+
+                    <!-- Almacén y tipo -->
+                    <div class="col-md-4">
+                        <x-adminlte-select name="Almacen_entrada" label="Almacén Entrada" required>
+                            @foreach ($almacenes as $almacen)
+                                <option value="{{ $almacen->Id_Almacen }}">{{ $almacen->Nombre }}</option>
+                            @endforeach
+                        </x-adminlte-select>
                     </div>
-                    <div class="mb-3">
-                        <label for="Almacen_entrada" class="form-label">Almacén entrada</label>
-                        <input type="number" class="form-control" id="Almacen_entrada" name="Almacen_entrada">
+                    <div class="col-md-4">
+                        <x-adminlte-input name="Fecha_entrada" label="Fecha Entrada" type="date" />
                     </div>
-                    <div class="mb-3">
-                        <label for="Fecha_entrada" class="form-label">Fecha de Entrada</label>
-                        <input type="datetime-local" class="form-control" id="Fecha_entrada" name="Fecha_entrada">
+                    <div class="col-md-4">
+                        <x-adminlte-select name="Tipo" label="Tipo Entrada" id="tipo" required>
+                            <option value="">Seleccione...</option>
+                            <option value="Madrina">Madrina</option>
+                            <option value="Traspaso">Traspaso</option>
+                        </x-adminlte-select>
                     </div>
-                    <div class="mb-3">
-                        <label for="Estado" class="form-label">Estado</label>
-                        <select class="form-control" id="Estado" name="Estado">
-                        <option value="inspeccion">Inspección</option>
-                        <option value="levantamiento">Transito</option>
-                        <option value="disponible">Disponible</option>
+                </div>
+            </div>
+        </div>
+
+        <!-- Paso 2: Checklist -->
+        <div class="card card-info">
+            <div class="card-header" style="background-color: #6b6666;">
+                <h3 class="card-title">Paso 2: Check List</h3>
+            </div>
+            <div class="card-body" id="checklist-container">
+                <!-- Se carga dinámicamente -->
+            </div>
+        </div>
+
+        {{-- //campos ocultos  --}}
+        <input type="hidden" name="Estado" id="estado_vehiculo" value="mantenimiento">
+
+
+
+        <!-- Paso 3: Confirmación -->
+        <div class="card card-success">
+            <div class="card-header" style="background-color: #6b6666;">
+                <h3 class="card-title">Paso 3: Confirmación</h3>
+            </div>
+            <div class="card-body">
+                <x-adminlte-textarea name="Observaciones" label="Observaciones" />
+                {{-- <x-adminlte-button label="Guardar Entrada" theme="success" icon="fas fa-save" type="submit" /> --}}
+                <x-adminlte-button id="btn-guardar" label="Guardar Entrada" theme="success" icon="fas fa-save" type="submit" />
+
+
+                <a href="{{ route('admin.vehiculos') }}" class="btn btn-secondary ml-2">Cancelar</a>
+            </div>
+        </div>
+    </form>
+</div>
+@endsection
+
+
+ @section('js')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const botonGuardar = document.getElementById('btn-guardar');
+    if (botonGuardar) {
+        botonGuardar.disabled = true; // Deshabilitar al cargar
+    }
+
+    const tipoSelect = document.getElementById('tipo');
+    tipoSelect.addEventListener('change', function () {
+        const tipo = this.value;
+        const container = document.getElementById('checklist-container');
+        container.innerHTML = '';
+
+        if (!tipo) {
+            if (botonGuardar) botonGuardar.disabled = true; // Deshabilitar si no hay tipo
+            return;
+        }
+
+        // Habilitar botón guardar al seleccionar tipo, sin importar checkboxes
+        if (botonGuardar) botonGuardar.disabled = false;
+
+        fetch(`{{ url('/checklist') }}/${tipo}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    container.innerHTML = `<p class="text-danger">No hay checklist disponible para este tipo.</p>`;
+                    return;
+                }
+
+                let html = `
+                    <input type="hidden" name="documentos_completos" value="0">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="documentos_completos" value="1" ${data.documentos_completos ? 'checked' : ''}>
+                        <label class="form-check-label">Documentos Completos</label>
+                    </div>
+
+                    <input type="hidden" name="accesorios_completos" value="0">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="accesorios_completos" value="1" ${data.accesorios_completos ? 'checked' : ''}>
+                        <label class="form-check-label">Accesorios Completos</label>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Estado Exterior</label>
+                        <select class="form-control" name="estado_exterior">
+                            <option ${data.estado_exterior == 'Excelente' ? 'selected' : ''}>Excelente</option>
+                            <option ${data.estado_exterior == 'Bueno' ? 'selected' : ''}>Bueno</option>
+                            <option ${data.estado_exterior == 'Regular' ? 'selected' : ''}>Regular</option>
+                            <option ${data.estado_exterior == 'Malo' ? 'selected' : ''}>Malo</option>
                         </select>
                     </div>
-                    
-                    <div class="mb-3">
-                        <label for="Tipo" class="form-label">Tipo</label>
-                        <input type="text" class="form-control" id="Tipo" name="Tipo">
+
+                    <div class="form-group">
+                        <label>Estado Interior</label>
+                        <select class="form-control" name="estado_interior">
+                            <option ${data.estado_interior == 'Excelente' ? 'selected' : ''}>Excelente</option>
+                            <option ${data.estado_interior == 'Bueno' ? 'selected' : ''}>Bueno</option>
+                            <option ${data.estado_interior == 'Regular' ? 'selected' : ''}>Regular</option>
+                            <option ${data.estado_interior == 'Malo' ? 'selected' : ''}>Malo</option>
+                        </select>
                     </div>
-                    <div class="mb-3">
-                        <label for="Coordinador_Logistica" class="form-label">Cordinador de logistica</label>
-                        <input type="text" class="form-control" id="Coordinador_Logistica" name="Coordinador_Logistica">
 
+                    <input type="hidden" name="pdi_realizada" value="0">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="pdi_realizada" value="1" ${data.pdi_realizada ? 'checked' : ''}>
+                        <label class="form-check-label">PDI Realizada</label>
                     </div>
-                    <button type="submit" class="btn btn-danger">Guardar Entrada</button>
-                    <a href="{{ route('admin.entradas') }}" class="btn btn-secondary">Cancelar</a>
-                </form>
-            </div>
-        </div>
-    </div>
-    
 
-@stop
+                    <input type="hidden" name="seguro_vigente" value="0">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="seguro_vigente" value="1" ${data.seguro_vigente ? 'checked' : ''}>
+                        <label class="form-check-label">Seguro Vigente</label>
+                    </div>
 
-@section('css')
-    <link rel="stylesheet" href="/css/admin_custom.css">
-@stop
+                    <input type="hidden" name="nfc_instalado" value="0">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="nfc_instalado" value="1" ${data.nfc_instalado ? 'checked' : ''}>
+                        <label class="form-check-label">NFC Instalado</label>
+                    </div>
 
-@section('js')
-    <script> console.log('Formulario de creación de entradas cargado correctamente!'); </script>
-@stop --}}
+                    <input type="hidden" name="gps_instalado" value="0">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="gps_instalado" value="1" ${data.gps_instalado ? 'checked' : ''}>
+                        <label class="form-check-label">GPS Instalado</label>
+                    </div>
 
+                    <input type="hidden" name="folder_viajero" value="0">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="folder_viajero" value="1" ${data.folder_viajero ? 'checked' : ''}>
+                        <label class="form-check-label">Folder Viajero</label>
+                    </div>
 
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>Wizard Entrada</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    .nav-pills .nav-link.active {
-      background-color: #0d6efd;
+                    <div class="form-group">
+                        <label>Observaciones</label>
+                        <textarea class="form-control" name="observaciones_checklist">${data.observaciones || ''}</textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Recibido por</label>
+                        <input type="text" class="form-control" name="recibido_por" value="${data.recibido_por || ''}">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Fecha Revisión</label>
+                        <input type="date" class="form-control" name="fecha_revision" value="${data.fecha_revision || ''}">
+                    </div>
+                `;
+
+                container.innerHTML = html;
+
+                document.querySelectorAll('.form-check-input[type="checkbox"]').forEach(cb => {
+                    cb.classList.add('checklist-item');
+                    cb.addEventListener('change', () => {
+                        verificarChecklist();
+                        actualizarObservacionesChecklist();
+                    });
+                });
+
+                verificarChecklist();
+                actualizarObservacionesChecklist();
+            })
+            .catch(error => {
+                console.error(error);
+                container.innerHTML = `<p class="text-danger">Error al cargar el checklist.</p>`;
+            });
+    });
+
+    function verificarChecklist() {
+        const checkboxes = document.querySelectorAll('.checklist-item');
+        // Ya no bloqueamos el botón guardar aquí, solo actualizamos estado
+        const todosMarcados = Array.from(checkboxes).every(cb => cb.checked);
+
+        const estadoVehiculoInput = document.getElementById('estado_vehiculo');
+        if (estadoVehiculoInput) {
+            estadoVehiculoInput.value = todosMarcados ? 'disponible' : 'mantenimiento';
+            console.log('Estado asignado:', estadoVehiculoInput.value);
+        }
     }
-  </style>
-</head>
-<body>
 
-<div class="container mt-5 text-center">
-  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCrearEntrada">Crear Entrada</button>
-</div>
+    function actualizarObservacionesChecklist() {
+        const observaciones = [];
 
-<!-- Modal Wizard Entrada -->
-<div class="modal fade" id="modalCrearEntrada" tabindex="-1" aria-labelledby="modalCrearEntradaLabel" aria-hidden="true">
-  <div class="modal-dialog modal-xl modal-dialog-scrollable">
-    <div class="modal-content">
-      <div class="modal-header bg-dark text-white">
-        <h5 class="modal-title" id="modalCrearEntradaLabel">Crear Nueva Entrada</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-      </div>
+        const razones = {
+            documentos_completos: 'Documentos incompletos',
+            accesorios_completos: 'Faltan accesorios',
+            pdi_realizada: 'PDI no realizada',
+            seguro_vigente: 'Seguro no vigente',
+            nfc_instalado: 'NFC no instalado',
+            gps_instalado: 'GPS no instalado',
+            folder_viajero: 'Falta folder viajero',
+        };
 
-      <form action="#" method="POST" id="formEntrada">
-        <div class="modal-body">
-          <!-- Tabs de pasos -->
-          <ul class="nav nav-pills mb-4 justify-content-center">
-            <li class="nav-item"><span class="nav-link active" id="tab-1">Entrada</span></li>
-            <li class="nav-item"><span class="nav-link" id="tab-2">Inspección</span></li>
-            <li class="nav-item"><span class="nav-link" id="tab-3">Resumen</span></li>
-          </ul>
+        Object.keys(razones).forEach(nombre => {
+            // Busca checkbox con valor=1 marcado
+            const cb = document.querySelector(`input[name="${nombre}"][value="1"]`);
+            if (!cb || !cb.checked) {
+                observaciones.push(`- ${razones[nombre]}`);
+            }
+        });
 
-          <!-- Paso 1 -->
-          <div class="step step-1">
-            <div class="row">
-              <div class="col-md-6">
-                <label>VIN</label><input type="text" name="VIN" class="form-control" required>
-                <label>Motor</label><input type="text" name="Motor" class="form-control" required>
-                <label>Versión</label><input type="text" name="Version" class="form-control" required>
-                <label>Color</label><input type="text" name="Color" class="form-control" required>
-              </div>
-              <div class="col-md-6">
-                <label>Modelo</label><input type="text" name="Modelo" class="form-control" required>
-                <label>Tipo</label><input type="text" name="Tipo" class="form-control">
-                <label>Almacén Salida</label><input type="number" name="Almacen_salida" class="form-control">
-                <label>Almacén Entrada</label><input type="number" name="Almacen_entrada" class="form-control">
-                <label>Fecha Entrada</label><input type="datetime-local" name="Fecha_entrada" class="form-control">
-              </div>
-            </div>
-          </div>
+        const textarea = document.querySelector('textarea[name="observaciones_checklist"]');
+        if (textarea) {
+            textarea.value = observaciones.join('\n');
+        }
+    }
 
-          <!-- Paso 2 -->
-          <div class="step step-2 d-none">
-            <h5>Checklist de Inspección</h5>
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" name="revision_motor" id="check1">
-              <label class="form-check-label" for="check1">Revisión de motor</label>
-            </div>
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" name="revisar_frenos" id="check2">
-              <label class="form-check-label" for="check2">Revisar frenos</label>
-            </div>
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" name="estado_llantas" id="check3">
-              <label class="form-check-label" for="check3">Estado de llantas</label>
-            </div>
-            <label>Estado General</label>
-            <select class="form-select" name="Estado">
-              <option value="">Selecciona...</option>
-              <option value="inspeccion">Inspección</option>
-              <option value="levantamiento">Tránsito</option>
-              <option value="disponible">Disponible</option>
-            </select>
-            <label>Coordinador de Logística</label>
-            <input type="text" class="form-control" name="Coordinador_Logistica">
-          </div>
-
-          <!-- Paso 3 -->
-          <div class="step step-3 d-none">
-            <h5>Resumen</h5>
-            <pre id="resumenDatos" class="bg-light border p-3 rounded" style="white-space: pre-wrap;"></pre>
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="button" class="btn btn-outline-primary" id="btnPrev">Anterior</button>
-          <button type="button" class="btn btn-primary" id="btnNext">Siguiente</button>
-          <button type="submit" class="btn btn-danger d-none" id="btnSubmit">Guardar Entrada</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-<!-- Scripts -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  const steps = document.querySelectorAll('.step');
-  const tabs = [document.getElementById('tab-1'), document.getElementById('tab-2'), document.getElementById('tab-3')];
-  const btnNext = document.getElementById('btnNext');
-  const btnPrev = document.getElementById('btnPrev');
-  const btnSubmit = document.getElementById('btnSubmit');
-  const resumenDiv = document.getElementById('resumenDatos');
-  let currentStep = 0;
-
-  function updateUI() {
-    steps.forEach((step, i) => step.classList.toggle('d-none', i !== currentStep));
-    tabs.forEach((tab, i) => tab.classList.toggle('active', i === currentStep));
-    btnPrev.style.display = currentStep === 0 ? 'none' : 'inline-block';
-    btnNext.style.display = currentStep === steps.length - 1 ? 'none' : 'inline-block';
-    btnSubmit.classList.toggle('d-none', currentStep !== steps.length - 1);
-  }
-
-  function gatherFormData() {
-    const form = document.getElementById('formEntrada');
-    const data = new FormData(form);
-    return [...data.entries()].map(([k, v]) => `${k}: ${v}`).join('\n');
-  }
-
-  btnNext.addEventListener('click', () => {
-    if (currentStep < steps.length - 1) currentStep++;
-    if (currentStep === steps.length - 1) resumenDiv.textContent = gatherFormData();
-    updateUI();
-  });
-
-  btnPrev.addEventListener('click', () => {
-    if (currentStep > 0) currentStep--;
-    updateUI();
-  });
-
-  updateUI();
+    // Antes de enviar formulario, actualiza estado vehículo
+    const formulario = document.querySelector('form');
+    if (formulario) {
+        formulario.addEventListener('submit', function () {
+            verificarChecklist();
+        });
+    }
 });
 </script>
-
-</body>
-</html>
+@endsection

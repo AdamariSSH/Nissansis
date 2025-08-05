@@ -6,8 +6,10 @@ use App\Http\Controllers\Vehiculoscontroller;
 use App\Http\Controllers\Almacencontroller;
 use App\Http\Controllers\SalidaController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\ChecklistController;
+use App\Imports\EntradasImport;
 use App\Models\Entrada;
-
+use App\Models\Vehiculos;
 Auth::routes();
 // Route::get('/', function () {
 //     return view('login');
@@ -34,10 +36,8 @@ Route::get('/entradas/importar', [Entradas::class, 'mostrarFormularioImportacion
 Route::post('/entradas/importar', [Entradas::class, 'importar'])->name('entradas.procesarImportacion');
 
 
-//Ruta para imprimir entradas//
-//Route::get('entradas/{No_orden}/imprimir', [Entradas::class, 'imprimir'])->name('entradas.imprimir');
-Route::get('/entradas/entradassimprimir/{No_orden}', [Entradas::class, 'imprimir'])
-     ->name('entradasimprimir'); // <--- Usa la clase de tu Controlador aquí, no la del Modelo
+//Ruta para imprimir ordenes de vehiculos //
+Route::get('/entradas/imprimir/{id}', [Entradas::class, 'imprimirOrden'])->name('entradasimprimir');
 
 
 
@@ -46,17 +46,16 @@ Route::get('/entradas/create', [Entradas::class, 'create'])->name('entradas.crea
 Route::post('/entradas', [Entradas::class, 'store'])->name('entradas.store');
 
 
+Route::get('/entradas/{entrada}/edit', [Entradas::class, 'edit'])->name('entradas.edit');
 
-// Ruta para mostrar el formulario de edición
-Route::get('/entradas/{No_orden}/edit', [Entradas::class, 'edit'])->name('entradas.edit');
+Route::put('/entradas/{entrada}', [Entradas::class, 'update'])->name('entradas.update');
+Route::delete('/entradas/{id}', [Entradas::class, 'destroy'])->name('entradas.destroy');
 
-// Ruta para actualizar los datos (después de enviar el formulario de edición)
-Route::put('/entradas/{No_orden}', [Entradas::class, 'update'])->name('entradas.update');
 
 //Ruta para eliminar entradas
+Route::delete('/vehiculos/{vin}', [VehiculosController::class, 'destroy'])->name('vehiculos.destroy');
 
 
-Route::delete('/entradas/{No_orden}', [Entradas::class, 'destroy'])->name('entradas.eliminar');
 
 
 
@@ -83,9 +82,13 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth']], function() {
      Route::get('/vehiculos/vehiculosimprimir/{No_orden}', [VehiculosController::class, 'imprimir'])
      ->name('vehiculosimprimir');
 
-       
+        // NEW: Ruta para crear una nueva entrada (vehículo, assuming 'entradas' relates to vehicle entries)
+        Route::get('/entradas/create', [Entradas::class, 'create'])
+        ->name('admin.entradas.create'); // Nota el prefijo 'admin.'
+     Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
 
-});
+
+       });
 
 
 //-------------------------------------------------------------------------------------------------\\
@@ -93,6 +96,8 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth']], function() {
 Route::get('/almacen', [AlmacenController::class, 'index'])->name('almacen');
 Route::get('/almacen/create', [AlmacenController::class, 'create'])->name('almacen.create');
 Route::post('/almacen', [AlmacenController::class, 'store'])->name('almacen.store');
+
+
 //ruta par eliminar el almacen 
 Route::delete('/almacen/{almacen}', [AlmacenController::class, 'destroy'])->name('almacen.destroy');
 
@@ -115,8 +120,17 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth']], function() {
     Route::get('/salidas', [SalidaController::class, 'index'])->name('admin.salidas');
     Route::post('/salidas', [SalidaController::class, 'store'])->name('salidas.store');
 
-    // Ruta para obtener datos de un vehículo por VIN (AJAX)
-    Route::get('/vehiculo/{vin}', function ($vin) {
-        return \App\Models\Vehiculos::where('VIN', $vin)->first();
-    });
+    // // Ruta para obtener datos de un vehículo por VIN (AJAX)
+    // Route::get('/vehiculo/{vin}', function ($vin) {
+    //     return \App\Models\Vehiculos::where('VIN', $vin)->first();
+    // });
 });
+
+
+
+
+
+///////checklist Controller 
+
+// Rutas para checklist
+Route::get('/checklist/{tipo}', [ChecklistController::class, 'getChecklist']);

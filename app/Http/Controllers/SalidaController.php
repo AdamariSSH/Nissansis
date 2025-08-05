@@ -3,17 +3,17 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\salida;
-use App\Models\almacen;
+use App\Models\Salida;
+use App\Models\Almacen;
 use App\Models\Vehiculos;
 
 class SalidaController extends Controller
 {
     public function index()
     {
-        $salidas = salida::all();
+        $salidas = Salida::all();
         $vehiculos = Vehiculos::all();
-        $almacenes = almacen::all();
+        $almacenes = Almacen::all();
 
         return view('salidas', compact('salidas', 'vehiculos', 'almacenes'));
     }

@@ -29,14 +29,18 @@
         </div>
 
         <div class="col-md-3 col-sm-6 col-12">
-            <div class="info-box">
-                <span class="info-box-icon bg-success"><i class="fas fa-box"></i></span>
-                <div class="info-box-content">
-                    <span class="info-box-text">Vehículos</span>
-                    <span class="info-box-number">185</span>
+            <a href="{{ route('admin.vehiculos') }}" class="text-decoration-none">
+                <div class="info-box">
+                    <span class="info-box-icon bg-info"><i class="fas fa-car"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">Gestionar Vehículos</span>
+                        <span class="info-box-number">{{ $cantidadVehiculos ?? '0' }}</span>
+                    </div>
                 </div>
-            </div>
+            </a>
         </div>
+
+
 
         <div class="col-md-3 col-sm-6 col-12">
             <div class="info-box">
