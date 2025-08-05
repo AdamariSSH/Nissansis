@@ -34,7 +34,7 @@ class VehiculosController extends Controller
 
     $almacenes = Almacen::all();
 
-    return view('vehiculos', compact('vehiculos', 'almacenes'));
+    return view('Vehiculos', compact('vehiculos', 'almacenes'));
 }
 
 
