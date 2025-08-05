@@ -1,135 +1,106 @@
 <?php
-
 namespace App\Imports;
 
 use App\Models\Entrada;
-use Maatwebsite\Excel\Concerns\ToModel;
-use Maatwebsite\Excel\Concerns\WithHeadingRow;
-use Illuminate\Support\Facades\Validator;
+use App\Models\Vehiculo;
+use App\Models\Checklist;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
+use Maatwebsite\Excel\Concerns\ToCollection;
+use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use PhpOffice\PhpSpreadsheet\Shared\Date;
 
-class EntradasImport implements ToModel, WithHeadingRow
+class EntradasImport implements ToCollection, WithHeadingRow
 {
-    // public function model(array $fila)
-    // {
-    //     // Normaliza las claves
-    //     $fila = array_change_key_case($fila, CASE_LOWER);
+    public function collection(Collection $rows)
+    {
+        foreach ($rows as $row) {
+            // Validar los campos básicos requeridos
+            $validator = Validator::make($row->toArray(), [
+                'vin' => 'required|string',
+                'motor' => 'required|string',
+                'modelo' => 'required|string',
+            ]);
 
-    //     // 🔥 Primero convierto fecha_entrada antes de validar
-    //     if (isset($fila['fecha_entrada'])) {
-    //         if (is_numeric($fila['fecha_entrada'])) {
-    //             try {
-    //                 $fila['fecha_entrada'] = Date::excelToDateTimeObject($fila['fecha_entrada'])->format('Y-m-d');
-    //             } catch (\Exception $e) {
-    //                 $fila['fecha_entrada'] = null;
-    //             }
-    //         }
-    //     }
-
-    //     // 🔥 Convierto modelo a string si no lo es
-    //     if (isset($fila['modelo']) && !is_string($fila['modelo'])) {
-    //         $fila['modelo'] = (string) $fila['modelo'];
-    //     }
-
-    //     // Ahora sí hago la validación
-    //     $validator = Validator::make($fila, [
-    //         'vin' => 'nullable|unique:entradas,vin',
-    //         'motor' => 'required|string',
-    //         'version' => 'required|string',
-    //         'color' => 'required|string',
-    //         'modelo' => 'required|string',
-    //         'almacen_entrada' => 'nullable|integer',
-    //         'almacen_salida' => 'nullable|integer',
-    //         'fecha_entrada' => 'nullable|date',
-    //         'estado' => 'nullable|string',
-    //         //'movimientos' => 'nullable|string',
-    //         'tipo' => 'nullable|string',
-    //         'coordinador_logistica' => 'nullable|string',
-    //     ]);
-
-    //     if ($validator->fails()) {
-    //         Log::warning('Fila de importación inválida: ' . json_encode($fila) . ' - Errores: ' . json_encode($validator->errors()));
-    //         return null;
-    //     }
-
-    //     return new Entrada([
-    //         'VIN' => $fila['vin'] ?? null,
-    //         'Motor' => $fila['motor'],
-    //         'Version' => $fila['version'],
-    //         'Color' => $fila['color'],
-    //         'Modelo' => $fila['modelo'],
-    //         'Almacen_entrada' => $fila['almacen_entrada'] ?? null,
-    //         'Almacen_salida' => $fila['almacen_salida'] ?? null,
-    //         'Fecha_entrada' => $fila['fecha_entrada'] ?? null,
-    //         'Estado' => $fila['estado'] ?? null,
-    //         //'Movimientos' => $fila['movimientos'] ?? null,
-    //         'Tipo' => $fila['tipo'] ?? null,
-    //         'Coordinador_Logistica' => $fila['coordinador_logistica'] ?? null
-    //     ]);
-    // }
-
-    // public function headingRow(): int
-    // {
-    //     return 1;
-    // }
-
-
-
-
-
-    // esto lo puse el 01/04/2025 
-    public function model(array $fila)
-{
-    $fila = array_change_key_case($fila, CASE_LOWER);
-    unset($fila['movimientos']); // 👈 Elimina campo no existente en la tabla
-
-    if (isset($fila['fecha_entrada'])) {
-        if (is_numeric($fila['fecha_entrada'])) {
-            try {
-                $fila['fecha_entrada'] = Date::excelToDateTimeObject($fila['fecha_entrada'])->format('Y-m-d');
-            } catch (\Exception $e) {
-                $fila['fecha_entrada'] = null;
+            if ($validator->fails()) {
+                Log::warning('Fila de importación inválida:', $row->toArray());
+                Log::warning('Errores:', $validator->errors()->toArray());
+                continue; // Saltar esta fila inválida
             }
+
+            // Normalizar valores booleanos
+            $bool = fn($value) => filter_var($value, FILTER_VALIDATE_BOOLEAN);
+
+            // Fecha de entrada convertida
+            $fechaEntrada = $this->transformarFecha($row['fecha_entrada']);
+            $fechaRevision = $this->transformarFecha($row['fecha_revision'] ?? $row['fecha_entrada']);
+            $proximoMantenimiento = $fechaEntrada ? Carbon::parse($fechaEntrada)->addDays(30)->toDateString() : null;
+
+            // Crear o actualizar vehículo
+            $vehiculo = Vehiculo::updateOrCreate(
+                ['VIN' => $row['vin']],
+                [
+                    'Motor' => $row['motor'],
+                    'Caracteristicas' => $row['caracteristicas'] ?? null,
+                    'Color' => $row['color'] ?? null,
+                    'Modelo' => $row['modelo'],
+                    'Coordinador_Logistica' => Auth::user()->name ?? 'Sistema',
+                    'Proximo_mantenimiento' => $proximoMantenimiento,
+                    'Almacen_actual' => $row['almacen_entrada'] ?? null,
+                    'Estado' => $row['estado'] ?? 'Mantenimiento',
+                ]
+            );
+
+            // Crear entrada
+            $entrada = Entrada::create([
+                'VIN' => $vehiculo->VIN,
+                'Kilometraje_entrada' => $row['kilometraje_entrada'] ?? 0,
+                'Almacen_entrada' => $row['almacen_entrada'] ?? null,
+                'Fecha_entrada' => $fechaEntrada ?? now(),
+                'Tipo' => $row['tipo'] ?? 'Desconocido',
+                'Observaciones' => $row['observaciones'] ?? null,
+                'Coordinador_Logistica' => Auth::user()->name ?? 'Sistema',
+            ]);
+
+            // Crear checklist
+            Checklist::create([
+                'No_orden_entrada' => $entrada->No_orden,
+                'tipo_checklist' => $row['tipo'] ?? 'Desconocido',
+                'documentos_completos' => $bool($row['documentos_completos'] ?? false),
+                'accesorios_completos' => $bool($row['accesorios_completos'] ?? false),
+                'estado_exterior' => $row['estado_exterior'] ?? null,
+                'estado_interior' => $row['estado_interior'] ?? null,
+                'pdi_realizada' => $bool($row['pdi_realizada'] ?? false),
+                'seguro_vigente' => $bool($row['seguro_vigente'] ?? false),
+                'nfc_instalado' => $bool($row['nfc_instalado'] ?? false),
+                'gps_instalado' => $bool($row['gps_instalado'] ?? false),
+                'folder_viajero' => $bool($row['folder_viajero'] ?? false),
+                'recibido_por' => $row['recibido_por'] ?? Auth::user()->name ?? 'Sistema',
+                'fecha_revision' => $fechaRevision ?? now(),
+                'observaciones' => $row['observaciones_checklist'] ?? null,
+            ]);
         }
     }
 
-    if (isset($fila['modelo']) && !is_string($fila['modelo'])) {
-        $fila['modelo'] = (string) $fila['modelo'];
+    private function transformarFecha($valor)
+    {
+        if (is_numeric($valor)) {
+            try {
+                return Date::excelToDateTimeObject($valor)->format('Y-m-d');
+            } catch (\Exception $e) {
+                Log::error("Error al convertir fecha Excel: {$valor}");
+                return null;
+            }
+        }
+
+        try {
+            return Carbon::parse($valor)->format('Y-m-d');
+        } catch (\Exception $e) {
+            Log::error("Fecha inválida: {$valor}");
+            return null;
+        }
     }
-
-    $validator = Validator::make($fila, [
-        'vin' => 'nullable|unique:entradas,vin',
-        'motor' => 'required|string',
-        'version' => 'required|string',
-        'color' => 'required|string',
-        'modelo' => 'required|string',
-        'almacen_entrada' => 'nullable|integer',
-        'almacen_salida' => 'nullable|integer',
-        'fecha_entrada' => 'nullable|date',
-        'estado' => 'nullable|string',
-        'tipo' => 'nullable|string',
-        'coordinador_logistica' => 'nullable|string',
-    ]);
-
-    if ($validator->fails()) {
-        Log::warning('Fila de importación inválida: ' . json_encode($fila) . ' - Errores: ' . json_encode($validator->errors()));
-        return null;
-    }
-
-    return new Entrada([
-        'VIN' => $fila['vin'] ?? null,
-        'Motor' => $fila['motor'],
-        'Version' => $fila['version'],
-        'Color' => $fila['color'],
-        'Modelo' => $fila['modelo'],
-        'Almacen_entrada' => $fila['almacen_entrada'] ?? null,
-        'Almacen_salida' => $fila['almacen_salida'] ?? null,
-        'Fecha_entrada' => $fila['fecha_entrada'] ?? null,
-        'Estado' => $fila['estado'] ?? null,
-        'Tipo' => $fila['tipo'] ?? null,
-        'Coordinador_Logistica' => $fila['coordinador_logistica'] ?? null
-    ]);
-}
-
 }

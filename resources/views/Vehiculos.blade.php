@@ -9,102 +9,141 @@
 @section('content')
     <div class="container-fluid">
         <div class="card">
-            <div class="card-header bg-secondary text-white">
-                <h4>🚗 Vehículos Registrados</h4>
+            <div class="card-header bg-gradient-secondary text-white d-flex align-items-center justify-content-between">
+                <h4 class="mb-0">Vehículos Registrados</h4>
             </div>
+
             <div class="card-body">
 
-                {{-- FORMULARIO DE FILTROS --}}
-                <form method="GET" action="{{ route('admin.vehiculos') }}" class="mb-4">
-                    <div class="row">
-                        <div class="col-md-3">
-                            <input type="text" name="vin" class="form-control" placeholder="Buscar por VIN" value="{{ request('vin') }}">
+               {{-- FORMULARIO DE FILTROS --}}
+                    <form method="GET" action="{{ route('admin.vehiculos') }}" class="mb-4">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <input type="text" name="vin" class="form-control" placeholder="Buscar por VIN" value="{{ request('vin') }}">
+                            </div>
+                            <div class="col-md-3">
+                                <select name="estado" class="form-control">
+                                    <option value="">-- Estado --</option>
+                                    <option value="Disponible" {{ request('estado') == 'Disponible' ? 'selected' : '' }}>Disponible</option>
+                                    <option value="Mantenimiento" {{ request('estado') == 'Mantenimiento' ? 'selected' : '' }}>Mantenimiento</option>
+                                    <option value="Entregado" {{ request('estado') == 'Entregado' ? 'selected' : '' }}>Entregado</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <select name="almacen_id" class="form-control">
+                                    <option value="">-- Almacén --</option>
+                                    @foreach($almacenes as $almacen)
+                                        <option value="{{ $almacen->Id_Almacen }}" {{ request('almacen_id') == $almacen->Id_Almacen ? 'selected' : '' }}>
+                                            {{ $almacen->Nombre }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-3 d-flex align-items-start gap-2">
+                                <button type="submit" class="btn btn-secondary">
+                                    <i class="fas fa-search"></i> Buscar
+                                </button>
+                                <a href="{{ route('admin.vehiculos') }}" class="btn btn-secondary">
+                                    <i class="fas fa-eraser"></i> Limpiar
+                                </a>
+                            </div>
                         </div>
-                        
-                        <div class="col-md-3">
-                            <select name="estado" class="form-control">
-                                <option value="">-- Estado --</option>
-                                <option value="Disponible" {{ request('estado') == 'Disponible' ? 'selected' : '' }}>Disponible</option>
-                                <option value="En mantenimiento" {{ request('estado') == 'En mantenimiento' ? 'selected' : '' }}>En mantenimiento</option>
-                                <option value="Entregado" {{ request('estado') == 'Entregado' ? 'selected' : '' }}>Entregado</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <select name="almacen_id" class="form-control">
-                                <option value="">-- Almacén --</option>
-                                @foreach($almacenes as $almacen)
-                                   <option value="{{ $almacen->Id_Almacen }}" {{ request('almacen_id') == $almacen->Id_Almacen ? 'selected' : '' }}>
-                                         {{ $almacen->Nombre }}
-                                    </option>
+                    </form>
 
-                                @endforeach
-                            </select>
-                        </div>
+                    {{-- BOTONES PARA ACCIONES ADICIONALES --}}
+                    <div class="mb-4 d-flex gap-2">
+                        <a href="{{ route('admin.entradas.create') }}" class="btn btn-secondary">
+                            <i class="fas fa-plus"></i> Agregar Vehículo
+                        </a>
 
+                        <a href="{{ route('entradas.importar') }}" class="btn btn-secondary">
+                            <i class="fas fa-file-import"></i> Importar Entradas
+                        </a>
                     </div>
-                    <div class="mt-3">
-                        <button type="submit" class="btn btn-primary">🔎 Buscar</button>
-                        <a href="{{ route('admin.vehiculos') }}" class="btn btn-secondary">❌ Limpiar</a>
-                    </div>
-                </form>
+
+                
 
                 {{-- TABLA DE VEHÍCULOS --}}
                 <div class="table-responsive">
                     <table class="table table-striped">
                         <thead class="table-dark">
                             <tr>
-                                <th>ID</th>
                                 <th>VIN</th>
                                 <th>Motor</th>
-                                <th>Versión</th>
+                                <th>Caracteristicas</th>
                                 <th>Color</th>
                                 <th>Modelo</th>
                                 <th>Fecha Entrada</th>
                                 <th>Estado</th>
                                 <th>Movimientos</th>
-                                <th>Almacen Actual</th>
+                                <th>Almacén Actual</th>
                                 <th>Tipo</th>
-                                <th>Coordinador Logística</th>
+                                
                                 <th>Próximo Mantenimiento</th>
-                                <th>Historial</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($vehiculos as $vehiculo)
                                 <tr>
-                                    <td>{{ $vehiculo->No_orden }}</td>
                                     <td>{{ $vehiculo->VIN }}</td>
                                     <td>{{ $vehiculo->Motor }}</td>
-                                    <td>{{ $vehiculo->Version }}</td>
+                                    <td>{{ $vehiculo->Caracteristicas }}</td>
                                     <td>{{ $vehiculo->Color }}</td>
                                     <td>{{ $vehiculo->Modelo }}</td>
-                                    <td>{{ $vehiculo->Fecha_entrada }}</td>
-                                    <td>{{ $vehiculo->Estado }}</td>
-                                    <td>{{ $vehiculo->Movimientos }}</td>
-                                    <td>{{ $vehiculo->almacen->Nombre ?? 'No asignado' }}</td>
-                                    <td>{{ $vehiculo->Tipo }}</td>
-                                    <td>{{ $vehiculo->Coordinador_Logistica }}</td>
-                                    <td>{{ $vehiculo->Proximo_mantenimiento }}</td>
-                                    <td>{{ $vehiculo->Historial }}</td>
+                                    <td>{{ optional($vehiculo->ultimaEntrada)->Fecha_entrada ?? 'Sin entrada' }}</td>
                                     <td>
-                                        <a href="#" class="btn btn-warning btn-sm" title="Editar"><i class="fas fa-edit"></i></a>
-                                        <button class="btn btn-danger btn-sm ml-1" title="Eliminar"><i class="fas fa-trash"></i></button>
-                                        <a href="{{ route('vehiculosimprimir', ['No_orden' => $vehiculo->No_orden]) }}" class="btn btn-primary btn-sm">
-                                            <i class="fas fa-print"></i>
-                                        </a>
+                                        @if($vehiculo->Estado === 'disponible')
+                                            <span class="badge badge-success">Disponible</span>
+                                        @else
+                                            <span class="badge badge-warning">Mantenimiento</span>
+                                        @endif
+                                    </td>
+                                    <td>{{ $vehiculo->Movimientos }}</td>
+                                    {{-- <td>{{ optional($vehiculo->ultimaEntrada->almacenEntrada)->Nombre ?? 'No asignado' }}</td> --}}
+                                    <td>{{ optional(optional($vehiculo->ultimaEntrada)->almacenEntrada)->Nombre ?? 'No asignado' }}</td>
+                                    {{-- <td>{{ $vehiculo->ultimaEntradatipo->Tipo ?? 'Sin entrada' }}</td> --}}
+                                    <td>{{ optional($vehiculo->ultimaEntradatipo)->Tipo ?? 'Sin entrada' }}</td>
+                                    <td>{{ $vehiculo->Proximo_mantenimiento }}</td>
+                                    
+                                    <td class="text-center">
+                                        <div class="btn-group" role="group">
+                                            @if ($vehiculo->ultimaEntrada)
+                                                <a href="{{ route('entradas.edit', $vehiculo->ultimaEntrada->No_orden) }}" class="btn btn-warning btn-sm" title="Editar Entrada">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+
+                                                <a href="{{ route('entradasimprimir', ['id' => $vehiculo->ultimaEntrada->No_orden]) }}" target="_blank" class="btn btn-primary btn-sm" title="Imprimir Entrada">
+                                                    <i class="fas fa-print"></i>
+                                                </a>
+
+                                                {{-- Botón Eliminar --}}
+                                                <form action="{{ route('vehiculos.destroy', $vehiculo->VIN) }}" method="POST" onsubmit="return confirm('¿Eliminar vehículo y todas sus entradas?')" style="display:inline;">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button class="btn btn-danger btn-sm" title="Eliminar Vehículo">
+                                                        <i class="fas fa-trash-alt"></i>
+                                                    </button>
+                                                </form>
+
+                                            @else
+                                                <span class="text-muted" title="No hay entrada reciente">
+                                                    <i class="fas fa-minus-circle"></i>
+                                                </span>
+                                            @endif
+                                        </div>
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="15" class="text-center">No se encontraron vehículos.</td>
+                                    <td colspan="14" class="text-center">No se encontraron vehículos.</td>
                                 </tr>
                             @endforelse
                         </tbody>
                     </table>
                 </div>
 
-                {{-- PAGINACIÓN BONITA --}}
+                {{-- PAGINACIÓN --}}
                 <div class="d-flex justify-content-center mt-4">
                     {{ $vehiculos->links('pagination::bootstrap-4') }}
                 </div>
@@ -112,10 +151,6 @@
             </div>
         </div>
     </div>
-@stop
-
-@section('css')
-    <link rel="stylesheet" href="/css/admin_custom.css">
 @stop
 
 @section('js')
