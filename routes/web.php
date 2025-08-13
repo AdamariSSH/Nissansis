@@ -52,7 +52,8 @@ Route::put('/entradas/{entrada}', [Entradas::class, 'update'])->name('entradas.u
 Route::delete('/entradas/{id}', [Entradas::class, 'destroy'])->name('entradas.destroy');
 
 
-//Ruta para eliminar entradas
+//Ruta para eliminar entradAS
+
 Route::delete('/vehiculos/{vin}', [VehiculosController::class, 'destroy'])->name('vehiculos.destroy');
 
 
@@ -109,10 +110,6 @@ Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name
 
 
 
-// //Rutas para ir al blade de salidas
-// Route::group(['prefix' => 'admin', 'middleware' => ['auth']], function() {
-//     Route::get('/salidas', [SalidaController::class, 'index'])->name('admin.salidas');
-// });
 
 
 // Ruta protegida con autenticación
@@ -120,10 +117,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth']], function() {
     Route::get('/salidas', [SalidaController::class, 'index'])->name('admin.salidas');
     Route::post('/salidas', [SalidaController::class, 'store'])->name('salidas.store');
 
-    // // Ruta para obtener datos de un vehículo por VIN (AJAX)
-    // Route::get('/vehiculo/{vin}', function ($vin) {
-    //     return \App\Models\Vehiculos::where('VIN', $vin)->first();
-    // });
+  
 });
 
 
