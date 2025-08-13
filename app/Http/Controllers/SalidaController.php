@@ -5,14 +5,14 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Salida;
 use App\Models\Almacen;
-use App\Models\Vehiculos;
+use App\Models\Vehiculo;
 
 class SalidaController extends Controller
 {
     public function index()
     {
         $salidas = Salida::all();
-        $vehiculos = Vehiculos::all();
+        $vehiculos = Vehiculo::all();
         $almacenes = Almacen::all();
 
         return view('salidas', compact('salidas', 'vehiculos', 'almacenes'));
@@ -20,7 +20,7 @@ class SalidaController extends Controller
 
     public function store(Request $request)
     {
-        $vehiculo = vehiculos::where('VIN', $request->VIN)->first();
+        $vehiculo = Vehiculo::where('VIN', $request->VIN)->first();
 
         if (!$vehiculo) {
             return back()->with('error', 'Vehículo no encontrado');
