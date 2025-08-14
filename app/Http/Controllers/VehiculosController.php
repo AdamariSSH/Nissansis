@@ -14,30 +14,35 @@ use BaconQrCode\Writer;
 
 class VehiculosController extends Controller
 {
-
+  
 
 public function index(Request $request)
 {
     $query = Vehiculo::with(['almacen', 'ultimaEntrada']);
 
+    // Filtrar por VIN
     if ($request->filled('vin')) {
-        $query->whereRaw('LEFT(VIN, 10) LIKE ?', [$request->vin . '%']);
+        $query->where('VIN', 'like', '%' . $request->vin . '%');
     }
 
+    // Filtrar por Estado
     if ($request->filled('estado')) {
         $query->where('Estado', $request->estado);
     }
 
+    // Filtrar por Almacén (nombre correcto en la BD)
     if ($request->filled('almacen_id')) {
-        $query->where('Almacen_actual', $request->almcen_id);
+        $query->where('Almacen_actual', $request->almacen_id);
     }
 
     $vehiculos = $query->paginate(10)->appends($request->all());
-
     $almacenes = Almacen::all();
 
     return view('Vehiculos', compact('vehiculos', 'almacenes'));
 }
+
+
+  
 
 public function destroy($vin)
 {

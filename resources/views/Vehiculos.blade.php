@@ -15,7 +15,7 @@
 
             <div class="card-body">
 
-               {{-- FORMULARIO DE FILTROS --}}
+               {{-- FORMULARIO DE FILTROS
                     <form method="GET" action="{{ route('admin.vehiculos') }}" class="mb-4">
                         <div class="row">
                             <div class="col-md-3">
@@ -48,7 +48,48 @@
                                 </a>
                             </div>
                         </div>
+                    </form> --}}
+                    <form method="GET" action="{{ route('admin.vehiculos') }}" class="mb-4">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <input type="text" name="vin" class="form-control" placeholder="Buscar por VIN" value="{{ request('vin') }}">
+                            </div>
+
+                            <div class="col-md-3">
+                                <select name="estado" class="form-control">
+                                    <option value="">-- Estado --</option>
+                                    <option value="Disponible" {{ request('estado') == 'Disponible' ? 'selected' : '' }}>Disponible</option>
+                                    <option value="Mantenimiento" {{ request('estado') == 'Mantenimiento' ? 'selected' : '' }}>Mantenimiento</option>
+                                    <option value="Entregado" {{ request('estado') == 'Entregado' ? 'selected' : '' }}>Entregado</option>
+
+                                    {{-- <option value="disponible" {{ request('estado') == 'disponible' ? 'selected' : '' }}>Disponible</option>
+                                    <option value="mantenimiento" {{ request('estado') == 'mantenimiento' ? 'selected' : '' }}>Mantenimiento</option>
+                                    <option value="entregado" {{ request('estado') == 'entregado' ? 'selected' : '' }}>Entregado</option> --}}
+                                </select>
+                            </div>
+
+                            <div class="col-md-3">
+                                <select name="almacen_id" class="form-control">
+                                    <option value="">-- Almacén --</option>
+                                    @foreach($almacenes as $almacen)
+                                        <option value="{{ $almacen->Id_Almacen }}" {{ request('almacen_id') == $almacen->Id_Almacen ? 'selected' : '' }}>
+                                            {{ $almacen->Nombre }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="col-md-3 d-flex align-items-start gap-2">
+                                <button type="submit" class="btn btn-secondary">
+                                    <i class="fas fa-search"></i> Buscar
+                                </button>
+                                <a href="{{ route('admin.vehiculos') }}" class="btn btn-secondary">
+                                    <i class="fas fa-eraser"></i> Limpiar
+                                </a>
+                            </div>
+                        </div>
                     </form>
+
 
                     {{-- BOTONES PARA ACCIONES ADICIONALES --}}
                     <div class="mb-4 d-flex gap-2">
@@ -100,9 +141,7 @@
                                         @endif
                                     </td>
                                     <td>{{ $vehiculo->Movimientos }}</td>
-                                    {{-- <td>{{ optional($vehiculo->ultimaEntrada->almacenEntrada)->Nombre ?? 'No asignado' }}</td> --}}
                                     <td>{{ optional(optional($vehiculo->ultimaEntrada)->almacenEntrada)->Nombre ?? 'No asignado' }}</td>
-                                    {{-- <td>{{ $vehiculo->ultimaEntradatipo->Tipo ?? 'Sin entrada' }}</td> --}}
                                     <td>{{ optional($vehiculo->ultimaEntradatipo)->Tipo ?? 'Sin entrada' }}</td>
                                     <td>{{ $vehiculo->Proximo_mantenimiento }}</td>
                                     
