@@ -43,13 +43,28 @@
                     
 
                     <!-- Almacén y tipo -->
-                    <div class="col-md-4">
+                    {{-- <div class="col-md-4">
                         <x-adminlte-select name="Almacen_entrada" label="Almacén Entrada" required>
                             @foreach ($almacenes as $almacen)
                                 <option value="{{ $almacen->Id_Almacen }}">{{ $almacen->Nombre }}</option>
                             @endforeach
                         </x-adminlte-select>
+                    </div> --}}
+                    <div class="col-md-4">
+                        @if(auth()->user()->isAdmin())
+                            {{-- Admin: puede elegir cualquier almacén --}}
+                            <x-adminlte-select name="Almacen_entrada" label="Almacén Entrada" required>
+                                @foreach ($almacenes as $almacen)
+                                    <option value="{{ $almacen->Id_Almacen }}">{{ $almacen->Nombre }}</option>
+                                @endforeach
+                            </x-adminlte-select>
+                        @else
+                            {{-- Usuario normal: almacén fijo en hidden --}}
+                            <input type="hidden" name="Almacen_entrada" value="{{ auth()->user()->almacen_id }}">
+                            <x-adminlte-input name="Almacen_nombre" label="Almacén Entrada" value="{{ auth()->user()->almacen->Nombre }}" disabled />
+                        @endif
                     </div>
+
                     <div class="col-md-4">
                         <x-adminlte-input name="Fecha_entrada" label="Fecha Entrada" type="date" />
                     </div>

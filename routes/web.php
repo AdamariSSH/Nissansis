@@ -48,8 +48,19 @@ Route::post('/entradas', [Entradas::class, 'store'])->name('entradas.store');
 
 Route::get('/entradas/{entrada}/edit', [Entradas::class, 'edit'])->name('entradas.edit');
 
+
+
+
+
 Route::put('/entradas/{entrada}', [Entradas::class, 'update'])->name('entradas.update');
 Route::delete('/entradas/{id}', [Entradas::class, 'destroy'])->name('entradas.destroy');
+
+// Confirmar entrada
+Route::put('/entradas/{id}/confirmar', [Entradas::class, 'confirmar'])->name('entradas.confirmar');
+
+    // Rechazar entrada
+ Route::put('/entradas/{id}/rechazar', [Entradas::class, 'rechazar'])->name('entradas.rechazar');
+
 
 
 //Ruta para eliminar entradAS
@@ -74,22 +85,82 @@ Route::delete('/vehiculos/{vin}', [VehiculosController::class, 'destroy'])->name
 
 
 
+// Route::group(['prefix' => 'admin', 'middleware' => ['auth']], function() {
+//     // Ruta para listar vehículos
+//     Route::get('/vehiculos', [VehiculosController::class, 'index'])
+//          ->name('admin.vehiculos');
+//            // Ruta para imprimir un vehículo específico
+
+//      Route::get('/vehiculos/vehiculosimprimir/{No_orden}', [VehiculosController::class, 'imprimir'])
+//      ->name('vehiculosimprimir');
+
+
+
+//         // NEW: Ruta para crear una nueva entrada (vehículo, assuming 'entradas' relates to vehicle entries)
+//         Route::get('/entradas/create', [Entradas::class, 'create'])
+//         ->name('admin.entradas.create'); // Nota el prefijo 'admin.'
+//      Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
+
+//          // Ruta para mostrar el formulario de salidas (blade en blanco)
+//     Route::get('/salidas/form', [App\Http\Controllers\SalidaController::class, 'form'])
+//          ->name('salidas.form');
+ 
+//        });
+
+
 Route::group(['prefix' => 'admin', 'middleware' => ['auth']], function() {
     // Ruta para listar vehículos
     Route::get('/vehiculos', [VehiculosController::class, 'index'])
          ->name('admin.vehiculos');
-           // Ruta para imprimir un vehículo específico
 
-     Route::get('/vehiculos/vehiculosimprimir/{No_orden}', [VehiculosController::class, 'imprimir'])
-     ->name('vehiculosimprimir');
+    // Ruta para imprimir un vehículo específico
+    Route::get('/vehiculos/vehiculosimprimir/{No_orden}', [VehiculosController::class, 'imprimir'])
+         ->name('vehiculosimprimir');
 
-        // NEW: Ruta para crear una nueva entrada (vehículo, assuming 'entradas' relates to vehicle entries)
-        Route::get('/entradas/create', [Entradas::class, 'create'])
-        ->name('admin.entradas.create'); // Nota el prefijo 'admin.'
-     Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
+    // Ruta para crear una nueva entrada
+    Route::get('/entradas/create', [Entradas::class, 'create'])
+         ->name('admin.entradas.create');
+
+    // Ruta home
+    Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])
+         ->name('home');
+
+    // Ruta para mostrar el formulario de salidas (blade en blanco)
+//    Route::get('/salidas/form', [SalidaController::class, 'form'])->name('salidas.form');
+     // Mostrar formulario de salida (pasando el VIN opcionalmente)
+// web.php
+// web.php (dentro del grupo /admin)
+// Formulario de salida SIN necesidad de VIN en la URL
+// Formulario de salida SIN necesidad de VIN en la URL
+//   Route::get('/salidas/create', [SalidaController::class, 'create'])->name('salidas.create');
+//     Route::post('/salidas/store', [SalidaController::class, 'store'])->name('salidas.store');
+//     Route::get('/salidas/vehiculo/{vin}', [SalidaController::class, 'getVehiculoData']);
+
+//     Route::get('/salidas/create', [SalidaController::class, 'create'])->name('salidas.create');
+//     Route::post('/salidas/store', [SalidaController::class, 'store'])->name('salidas.store');
+//     // Ruta para buscar datos de vehículo por VIN
+// Route::get('/salidas/vehiculo/{vin}', [SalidaController::class, 'getVehiculoData'])->name('salidas.vehiculo');
 
 
-       });
+
+// Listado de salidas
+Route::get('/salidas', [SalidaController::class, 'index'])->name('salidas.index');
+
+// Formulario de crear salida
+Route::get('/salidas/create', [SalidaController::class, 'create'])->name('salidas.create');
+
+// Guardar salida
+Route::post('/salidas/store', [SalidaController::class, 'store'])->name('salidas.store');
+
+// Endpoint AJAX para obtener info del vehículo por VIN
+Route::get('/salidas/vehiculo/{vin}', [SalidaController::class, 'getVehiculoData'])->name('salidas.vehiculo');
+
+});
+
+
+
+
+
 
 
 //-------------------------------------------------------------------------------------------------\\
@@ -112,13 +183,13 @@ Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name
 
 
 
-// Ruta protegida con autenticación
-Route::group(['prefix' => 'admin', 'middleware' => ['auth']], function() {
-    Route::get('/salidas', [SalidaController::class, 'index'])->name('admin.salidas');
-    Route::post('/salidas', [SalidaController::class, 'store'])->name('salidas.store');
+// // Ruta protegida con autenticación
+// Route::group(['prefix' => 'admin', 'middleware' => ['auth']], function() {
+//     Route::get('/salidas', [SalidaController::class, 'index'])->name('admin.salidas');
+//     Route::post('/salidas', [SalidaController::class, 'store'])->name('salidas.store');
 
   
-});
+// });
 
 
 

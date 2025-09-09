@@ -1,174 +1,161 @@
 @extends('adminlte::page')
 
-@section('title', 'Salidas de Almacén')
+@section('title', 'Salidas de Vehículos')
 
 @section('content_header')
-    <h1>Salidas de Almacén</h1>
+    <h1 class="mb-3">📤 Salidas de Vehículos</h1>
 @stop
 
 @section('content')
-
-    {{-- Mensaje de éxito --}}
-    @if (session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
-            <button type="button" class="close" data-dismiss="alert">&times;</button>
+<div class="container-fluid">
+    <div class="card shadow">
+        <!-- Encabezado -->
+        <div class="card-header bg-gradient-secondary text-white d-flex justify-content-between align-items-center">
+            <h3 class="card-title mb-0">Listado de Salidas</h3>
+            <a href="{{ route('salidas.create') }}" class="btn btn-primary btn-sm">
+                <i class="fas fa-plus"></i> Nueva Salida
+            </a>
         </div>
-    @endif
 
-    <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <span>Listado de Salidas</span>
-            <button class="btn btn-danger" data-toggle="modal" data-target="#modalCrearSalida">Registrar Salida</button>
-        </div>
+        <!-- Tabla -->
         <div class="card-body">
-            <table class="table table-bordered">
-                <thead class="thead-dark">
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped table-hover">
+                    <thead class="thead-dark text-center">
+                        <tr>
+                            <th>ID</th>
+                            <th>VIN</th>
+                            <th>Motor</th>
+                            <th>Características</th>
+                            <th>Color</th>
+                            <th>Modelo</th>
+                            <th>Almacén</th>
+                            <th>Fecha</th>
+                            <th>Tipo de Salida</th>
+                            <th>Estatus</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($salidas as $salida)
+                            <tr class="align-middle">
+                                <td>{{ $salida->No_orden_salida}}</td>
+                                <td>{{ $salida->VIN }}</td>
+                                <td>{{ $salida->Motor }}</td>
+                                <td>{{ $salida->Caracteristicas }}</td>
+                                <td>{{ $salida->Color }}</td>
+                                <td>{{ $salida->Modelo }}</td>
+                                <!-- Aquí se corrige la relación -->
+                                <td>{{ optional($salida->almacenSalida)->Nombre ?? 'N/A' }}</td>
+                                <td>{{ \Carbon\Carbon::parse($salida->Fecha)->format('d/m/Y') }}</td>
+                                <td>{{ $salida->Tipo_salida ?? '-' }}</td>
+                                <td>
+                                    @switch($salida->estatus)
+                                        @case('pendiente')
+                                            <span class="badge bg-warning">Pendiente</span>
+                                            @break
+                                        @case('confirmada')
+                                            <span class="badge bg-success">Confirmada</span>
+                                            @break
+                                             @case('rechazada')
+                                            <span class="badge bg-success">Rechazada</span>
+                                            @break
+                                        @case('cancelada')
+                                            <span class="badge bg-danger">Cancelada</span>
+                                            @break
+                                        @default
+                                            <span class="badge bg-secondary">{{ $salida->estatus ?? 'N/A' }}</span>
+                                    @endswitch
+                                </td>
+                                <td class="text-center">
+                                    @if($salida->estatus == 'pendiente')
+                                        <a href="{{ route('admin.entradas') }}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye"></i> Revisar Entrada
+                                        </a>
+                                    @endif
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="11" class="text-center text-muted">
+                                    No hay salidas registradas en tu almacén.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Paginación (si aplica) -->
+            {{ $salidas->links() ?? '' }}
+
+        </div>
+    </div>
+</div>
+@stop
+
+
+                {{-- <thead class="thead-dark">
                     <tr>
                         <th>ID</th>
                         <th>VIN</th>
                         <th>Motor</th>
-                        <th>Versión</th>
+                        <th>Características</th>
                         <th>Color</th>
-                        <th>Tipo de salida</th>
-                        <th>Almacén Salida</th>
-                        <th>Almacén Entrada</th>
-                        <th>Fecha</th>
                         <th>Modelo</th>
+                        <th>Almacén</th>
+                        <th>Fecha</th>
+                        <th>Tipo de Salida</th>
+                        <th>Estatus</th>
+                        <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach ($salidas as $salida)
-                    <tr>
-                        <td>{{ $salida->id_salida }}</td>
-                        <td>{{ $salida->VIN }}</td>
-                        <td>{{ $salida->Motor }}</td>
-                        <td>{{ $salida->Version }}</td>
-                        <td>{{ $salida->Color }}</td>
-                        <td>{{ $salida->Tipo_salida }}</td>
-                        <td>{{ $salida->Almacen_salida }}</td>
-                        <td>{{ $salida->Almacen_entrada }}</td>
-                        <td>{{ $salida->Fecha }}</td>
-                        <td>{{ $salida->Modelo }}</td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
-    </div>
+                    @forelse($salidas as $salida)
+                        <tr>
+                            <td>{{ $salida->id_salida }}</td>
+                            <td>{{ $salida->VIN }}</td>
+                            <td>{{ $salida->Motor }}</td>
+                            <td>{{ $salida->Caracteristicas }}</td>
+                            <td>{{ $salida->Color }}</td>
+                            <td>{{ $salida->Modelo }}</td>
+                            <td>
+                                {{ optional($salida->almacen)->Nombre ?? 'N/A' }}
+                            </td>
+                            <td>{{ \Carbon\Carbon::parse($salida->Fecha)->format('d/m/Y') }}</td>
+                            <td>{{ $salida->Tipo_salida ?? '-' }}</td>
+                            <td>
+                                @if($salida->estatus == 'pendiente')
+                                    <span class="badge bg-warning">Pendiente</span>
+                                @elseif($salida->estatus == 'confirmada')
+                                    <span class="badge bg-success">Confirmada</span>
+                                @elseif($salida->estatus == 'cancelada')
+                                    <span class="badge bg-danger">Cancelada</span>
+                                @else
+                                    <span class="badge bg-secondary">{{ $salida->estatus ?? 'N/A' }}</span>
+                                @endif
+                            </td>
 
-    <!-- Modal Crear Salida -->
-    <div class="modal fade" id="modalCrearSalida" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content">
-          <form action="{{ route('salidas.store') }}" method="POST">
-            @csrf
-            <div class="modal-header bg-danger text-white">
-              <h5 class="modal-title">Registrar Salida</h5>
-              <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
-            </div>
-
-            <div class="modal-body">
-              <div class="form-group">
-                  <label>VIN</label>
-                  <select name="VIN" class="form-control" required>
-                      <option value="">Seleccione VIN</option>
-                      @foreach($vehiculos as $vehiculo)
-                          <option value="{{ $vehiculo->VIN }}">{{ $vehiculo->VIN }}</option>
-                      @endforeach
-                  </select>
-              </div>
-
-              <div class="form-group">
-                  <label>Motor</label>
-                  <input type="text" name="Motor" id="motor" class="form-control" readonly>
-              </div>
-
-              <div class="form-group">
-                  <label>Versión</label>
-                  <input type="text" name="Version" id="version" class="form-control" readonly>
-              </div>
-
-              <div class="form-group">
-                  <label>Color</label>
-                  <input type="text" name="Color" id="color" class="form-control" readonly>
-              </div>
-
-              <div class="form-group">
-                  <label>Modelo</label>
-                  <input type="text" name="Modelo" id="modelo" class="form-control" readonly>
-              </div>
-
-              <div class="form-group">
-                  <label>Tipo de salida</label>
-                  <input type="text" name="Tipo_salida" class="form-control" required>
-              </div>
-
-              <div class="form-group">
-                  <label>Almacén de salida</label>
-                  <select name="Almacen_salida" class="form-control" required>
-                      <option value="">Seleccione almacén</option>
-                      @foreach($almacenes as $almacen)
-                          <option value="{{ $almacen->Id_Almacen }}">{{ $almacen->Nombre }}</option>
-                      @endforeach
-                  </select>
-              </div>
-
-              <div class="form-group">
-                  <label>Almacén de entrada</label>
-                  <select name="Almacen_entrada" class="form-control">
-                      <option value="">-- Opcional --</option>
-                      @foreach($almacenes as $almacen)
-                          <option value="{{ $almacen->Id_Almacen }}">{{ $almacen->Nombre }}</option>
-                      @endforeach
-                  </select>
-              </div>
-
-              <div class="form-group">
-                  <label>Fecha</label>
-                  <input type="date" name="Fecha" class="form-control" required>
-              </div>
-            </div>
-
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
-              <button type="submit" class="btn btn-danger">Guardar Salida</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-@stop
-
-@section('css')
-    <link rel="stylesheet" href="/css/admin_custom.css">
-@stop
-
-@section('js')
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script>
-    // Autocompletar datos del VIN
-    $('select[name="VIN"]').on('change', function () {
-        const vin = $(this).val();
-        if (vin) {
-            $.ajax({
-                url: `/vehiculo/${vin}`,
-                type: 'GET',
-                success: function (data) {
-                    $('#motor').val(data.Motor || '');
-                    $('#version').val(data.Version || '');
-                    $('#color').val(data.Color || '');
-                    $('#modelo').val(data.Modelo || '');
-                }
-            });
-        } else {
-            $('#motor, #version, #color, #modelo').val('');
-        }
-    });
-
-    // Cerrar alert después de 3 segundos
-    setTimeout(function () {
-        $('.alert-success').fadeOut('slow');
-    }, 3000);
-</script>
-@stop
+                             <td>
+                                <a href="{{ route('salidas.show', $salida->id_salida) }}" class="btn btn-sm btn-info">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{{ route('salidas.edit', $salida->id_salida) }}" class="btn btn-sm btn-warning">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form action="{{ route('salidas.destroy', $salida->id_salida) }}" method="POST" class="d-inline">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Eliminar esta salida?')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </td> 
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="10" class="text-center">No hay salidas registradas</td>
+                        </tr>
+                    @endforelse
+                </tbody> --}}
+  

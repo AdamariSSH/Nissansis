@@ -1,4 +1,4 @@
-@extends('adminlte::page')
+ @extends('adminlte::page')
 
 @section('title', 'Editar Entrada')
 
@@ -293,4 +293,6 @@
     });
 </script>
 
-@endsection
+@endsection 
+
+

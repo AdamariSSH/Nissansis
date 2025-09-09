@@ -16,6 +16,26 @@ class Almacen extends Model
 
     protected $fillable = [
         'Nombre',
-        'Direccion', // Agrega esta línea
+        'Direccion',
     ];
+
+        // Relación: un almacén tiene muchos usuarios
+    public function usuarios()
+    {
+        return $this->hasMany(User::class, 'almacen_id', 'Id_Almacen');
+    }
+
+    // Relación: un almacén tiene muchos vehículos
+    public function vehiculos()
+    {
+        return $this->hasMany(Vehiculo::class, 'Almacen_actual', 'Id_Almacen');
+    }
+
+    // Relación: un almacén tiene muchas entradas
+    public function entradas()
+    {
+        return $this->hasMany(Entrada::class, 'Almacen_entrada', 'Id_Almacen');
+    }
+
+
 }

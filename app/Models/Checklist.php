@@ -3,12 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Entrada; // 👈 Importación necesaria
+use App\Models\Entrada; // 
 
 class Checklist extends Model
 {
     protected $table = 'checklist';
     protected $primaryKey = 'id_checklist';
+    public $incrementing = true;
+    public $timestamps = true; // ✔️ la tabla sí tiene created_at / updated_at
 
 
     protected $fillable = [
@@ -23,3 +25,5 @@ class Checklist extends Model
         return $this->belongsTo(Entrada::class, 'No_orden_entrada', 'No_orden');
     }
 }
+
+
