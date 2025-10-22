@@ -1,6 +1,5 @@
 <?php
 namespace App\Http\Controllers;
-
 use Illuminate\Http\Request;
 use App\Models\Vehiculo;
 use App\Models\Almacen;
@@ -35,7 +34,7 @@ class VehiculosController extends Controller
 
     $almacenes = Almacen::all();
 
-    return view('Vehiculos.index', compact('vehiculos', 'almacenes'));
+    return view('vehiculos.index', compact('vehiculos', 'almacenes'));
 }
 
 
