@@ -119,7 +119,7 @@
             <div class="card-body">
                 <x-adminlte-textarea name="Observaciones_salida" label="Observaciones de salida" />
                 <x-adminlte-button id="btn-guardar" label="Guardar Salida" theme="success" icon="fas fa-save" type="submit" />
-                <a href="{{ route('admin.vehiculos') }}" class="btn btn-secondary ml-2">Cancelar</a>
+                <a href="{{ route('vehiculos.index') }}" class="btn btn-secondary ml-2">Cancelar</a>
             </div>
         </div>
     </form>

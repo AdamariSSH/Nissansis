@@ -94,7 +94,7 @@ class Entradas extends Controller
                 
                 // El mensaje $e->getMessage() es el que lanzaste en EntradasImport.php
                 return redirect()
-                    ->route('admin.vehiculos')
+                    ->route('vehiculos.index')
                     ->with('error', 'Importación cancelada: ' . $e->getMessage());
             }
         }

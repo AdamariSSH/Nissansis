@@ -109,22 +109,6 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'role:admin']], func
         return view('admin.dashboard'); 
     })->name('admin.dashboard');
 
-<<<<<<< HEAD
 
-// //Rutas para ir al blade de salidas
-// Route::group(['prefix' => 'admin', 'middleware' => ['auth']], function() {
-//     Route::get('/salidas', [SalidaController::class, 'index'])->name('admin.salidas');
-// });
-
-
-// Ruta protegida con autenticación
-Route::group(['prefix' => 'admin', 'middleware' => ['auth']], function() {
-    Route::get('/salidas', [SalidaController::class, 'index'])->name('admin.salidas');
-    Route::post('/salidas', [SalidaController::class, 'store'])->name('salidas.store');
-
-    // Ruta para obtener datos de un vehículo por VIN (AJAX)
-    Route::get('/vehiculo/{vin}', function ($vin) {
-        return \App\Models\Vehiculos::where('VIN', $vin)->first();
-    });
 });
-=======
+

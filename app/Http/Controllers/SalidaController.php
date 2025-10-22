@@ -10,7 +10,7 @@ use App\Models\Checklist;
 use App\Models\ChecklistSalida;
 use Illuminate\Database\QueryException; 
 use Illuminate\Support\Facades\DB;
-use Illuminate\Http\Request;
+
 use Illuminate\Routing\Controller;
 
 use BaconQrCode\Writer;

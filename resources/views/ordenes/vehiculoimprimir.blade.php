@@ -20,7 +20,7 @@
         <button class="btn btn-danger" onclick="window.print()">
             <i class="fas fa-print"></i> Imprimir
         </button>
-        <a href="{{ route('admin.vehiculos') }}" class="btn btn-secondary">
+        <a href="{{ route('vehiculos.index') }}" class="btn btn-secondary">
             <i class="fas fa-arrow-left"></i> Regresar
         </a>
     </div>

@@ -17,7 +17,7 @@ class VehiculosController extends Controller
 {
     public function index(Request $request)
 {
-    $query = Vehiculos::with('almacen');
+    $query = Vehiculo::with('almacen');
 
     if ($request->filled('vin')) {
         $query->whereRaw('RIGHT(VIN, 10) LIKE ?', ['%' . $request->vin . '%']);
@@ -35,7 +35,7 @@ class VehiculosController extends Controller
 
     $almacenes = Almacen::all();
 
-    return view('Vehiculos', compact('vehiculos', 'almacenes'));
+    return view('Vehiculos.index', compact('vehiculos', 'almacenes'));
 }
 
 

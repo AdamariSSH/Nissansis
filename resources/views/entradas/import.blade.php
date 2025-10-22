@@ -30,7 +30,7 @@
                         <input type="file" class="form-control" id="archivo" name="archivo" accept=".xlsx,.csv" required>
                     </div>
                     <button type="submit" class="btn btn-success"><i class="fas fa-file-import"></i> Importar</button>
-                    <a href="{{ route('admin.vehiculos') }}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Cancelar</a>
+                    <a href="{{ route('vehiculos.index') }}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Cancelar</a>
                 </form>
             </div>
         </div>
