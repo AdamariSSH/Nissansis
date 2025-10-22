@@ -3,58 +3,58 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-
 class Entrada extends Model
 {
-    //
-    // protected $table = 'entradas'; // Nombre de la tabla en la BD
+    protected $table = 'entradas';
+    protected $primaryKey = 'No_orden';
 
-    // protected $primaryKey = 'No_orden'; // Llave primaria
+    public $incrementing = true; //  porque No_orden es autoincremental
+    protected $keyType = 'int'; //  porque es de tipo entero
+    public $timestamps = true;
 
-    // public $timestamps = false; // Si la tabla no tiene created_at y updated_at
-
-    // protected $fillable = [
-    //     'VIN',
-    //     'Motor',
-    //    'Version',
-    //     'Color',
-    //     'Modelo',
-    //     'Almacen_entrada',
-    //     'Fecha_entrada',
-    //     'Estado',
-    //     'Acciones',
-    //     'Fecha_modificacion'
-    // ];
-
-    
-
-    protected $table = 'entradas'; // Este es el nombre de la tabla en la BD
-    protected $primaryKey = 'No_orden'; // Según la imagen de tu tabla
-    public $timestamps = false; // Si no usas `created_at` y `updated_at`
 
     protected $fillable = [
-        
-        'VIN', 
-        'Motor', 
-        'Version', 
-        'Color', 
-        'Modelo', 
-        'Almacen_entrada', 
-        'Fecha_entrada', 
-        'Estado', 
-        //'Movimientos', 
-        'Tipo',
-        'Almacen_salida',
-        'Coordinador_Logistica',
+        'VIN', 'Almacen_entrada', 'Estado',
+        'Tipo', 'Almacen_salida', 'Coordinador_Logistica','estatus',
+        'Proximo_mantenimiento', 'Kilometraje_entrada', 'Movimientos'
     ];
 
+    protected $casts = [
+       
+        'Proximo_mantenimiento' => 'date', // Recomendado si es solo fecha
+    ];
+    
+    //  Relación con Almacén (almacén de entrada)
     public function almacenEntrada()
-{
-    return $this->belongsTo(Almacen::class, 'Almacen_entrada');
-}
+    {
+        return $this->belongsTo(Almacen::class, 'Almacen_entrada', 'Id_Almacen');
+    }
 
+    //  Relación con Vehículo
+    public function vehiculo()
+    {
+        return $this->belongsTo(Vehiculo::class, 'VIN', 'VIN');
+    }
+
+    //  Relación con Checklist
+    public function checklist()
+    {
+        return $this->hasOne(Checklist::class, 'No_orden_entrada', 'No_orden');
+    }
+
+
+// Relación con el almacén de salida (si aplica)
 public function almacenSalida()
 {
-    return $this->belongsTo(Almacen::class, 'Almacen_salida');
+    return $this->belongsTo(Almacen::class, 'Almacen_salida', 'Id_Almacen');
 }
+
+  
+
+
+
 }
+
+
+
+
