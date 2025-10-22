@@ -19,6 +19,8 @@
 
         <!-- Tabla -->
         <div class="card-body">
+                
+
             <div class="table-responsive">
                 <table class="table table-bordered table-striped table-hover">
                     <thead class="thead-dark text-center">
@@ -67,9 +69,28 @@
                                             <span class="badge bg-secondary">{{ $salida->estatus ?? 'N/A' }}</span>
                                     @endswitch
                                 </td>
+                                <td>
+                                    {{-- Botones de acción --}}
+                                    {{-- <a href="{{ route('entradas.edit', $entrada->No_orden) }}" class="btn btn-sm btn-primary" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a> --}}
+                                    {{-- <a href="{{ route('salidasimprimir', ['id' => $salida->No_orden_salida]) }}" target="_blank" class="btn btn-sm btn-secondary" title="Imprimir">
+                                        <i class="fas fa-print"></i>
+                                    </a> --}}
+                                    {{-- <a href="{{ route('salidasimprimir', ['id' => $salida->No_orden_salida]) }}" target="_blank" class="btn btn-sm btn-secondary">
+                                        <i class="fas fa-print"></i>
+                                    </a> --}}
+                                    <a href="{{ route('salidasimprimir', ['id' => $salida->No_orden_salida]) }}" 
+                                        class="btn btn-sm btn-secondary" title="Imprimir">
+                                        <i class="fas fa-print"></i>
+                                    </a>
+
+  
+
+                                </td>
                                 <td class="text-center">
                                     @if($salida->estatus == 'pendiente')
-                                        <a href="{{ route('admin.entradas') }}" class="btn btn-sm btn-info">
+                                        <a href="{{ route('entradas.index') }}" class="btn btn-sm btn-info">
                                             <i class="fas fa-eye"></i> Revisar Entrada
                                         </a>
                                     @endif
@@ -95,5 +116,4 @@
 @stop
 
 
-              
-  
+             

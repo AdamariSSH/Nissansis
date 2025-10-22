@@ -20,47 +20,69 @@
             </div>
             <div class="card-body">
                 <div class="row">
-                    <!-- Vehículo -->
+                    
                     <div class="col-md-4">
                         <x-adminlte-input name="VIN" label="VIN" maxlength="17" readonly value="{{ old('VIN', $entrada->VIN) }}" />
                     </div>
-                    <div class="col-md-4">
-                        <x-adminlte-input name="Motor" label="Motor" maxlength="17" requiredvalue="{{ old('Motor', $entrada->Motor ?? '') }}" />
 
-                    </div>
                     <div class="col-md-4">
-                        <x-adminlte-input name="Caracteristicas" label="Caracteristicas" required value="{{ old('Caracteristicas', $entrada->Caracteristicas) }}" />
-                    </div>
-                    <div class="col-md-4">
-                        <x-adminlte-input name="Color" label="Color" required value="{{ old('Color', $entrada->Color) }}" />
-                    </div>
-                    <div class="col-md-4">
-                        <x-adminlte-input name="Modelo" label="Modelo" required value="{{ old('Modelo', $entrada->Modelo) }}" />
-                    </div>
-                    <div class="col-md-4">
-                        <x-adminlte-input name="Kilometraje_entrada" label="Kilometraje" type="number" value="{{ old('Kilometraje_entrada', $entrada->Kilometraje_entrada) ?? 0 }}" />
+                        <x-adminlte-input name="Motor" label="Motor" maxlength="17" required 
+                            value="{{ old('Motor', $entrada->vehiculo->Motor ?? $entrada->Motor ?? '') }}" />
                     </div>
 
                     <div class="col-md-4">
-                        <x-adminlte-select name="Almacen_entrada" label="Almacén Entrada" required>
+                        <x-adminlte-input name="Caracteristicas" label="Caracteristicas" required 
+                            value="{{ old('Caracteristicas', $entrada->vehiculo->Caracteristicas ?? $entrada->Caracteristicas) }}" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <x-adminlte-input name="Color" label="Color" required 
+                            value="{{ old('Color', $entrada->vehiculo->Color ?? $entrada->Color) }}" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <x-adminlte-input name="Modelo" label="Modelo" required 
+                            value="{{ old('Modelo', $entrada->vehiculo->Modelo ?? $entrada->Modelo) }}" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <x-adminlte-input name="Kilometraje_entrada" label="Kilometraje" type="number" 
+                            value="{{ old('Kilometraje_entrada', $entrada->Kilometraje_entrada) ?? 0 }}" />
+                    </div>
+                    
+                    <div class="col-md-4">
+                        {{-- Deshabilitamos el campo para que el usuario NO lo edite --}}
+                        <x-adminlte-select name="Almacen_entrada_disabled" label="Almacén Entrada" required disabled>
                             @foreach ($almacenes as $almacen)
                                 <option value="{{ $almacen->Id_Almacen }}" {{ old('Almacen_entrada', $entrada->Almacen_entrada) == $almacen->Id_Almacen ? 'selected' : '' }}>
                                     {{ $almacen->Nombre }}
                                 </option>
                             @endforeach
                         </x-adminlte-select>
+                        <input type="hidden" name="Almacen_entrada" value="{{ old('Almacen_entrada', $entrada->Almacen_entrada) }}">
                     </div>
-                    <div class="col-md-4">
-                        <x-adminlte-input name="Fecha_entrada" label="Fecha Entrada" type="date" value="{{ old('Fecha_entrada', $entrada->Fecha_entrada ? \Carbon\Carbon::parse($entrada->Fecha_entrada)->format('Y-m-d') : '') }}" />
 
-                    </div>
                     <div class="col-md-4">
-                        <x-adminlte-select name="Tipo" label="Tipo Entrada" id="tipo" required>
+                        <x-adminlte-input 
+                            type="datetime-local" 
+                            name="Fecha_entrada" 
+                            label="Fecha y Hora de Entrada (Registro Original)" 
+                            value="{{ \Carbon\Carbon::parse($entrada->created_at)->format('Y-m-d\TH:i') }}" 
+                            required
+                            readonly 
+                        />
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <x-adminlte-select name="Tipo_disabled" label="Tipo Entrada" id="tipo" required disabled>
                             <option value="">Seleccione...</option>
                             <option value="Madrina" {{ old('Tipo', $entrada->Tipo) == 'Madrina' ? 'selected' : '' }}>Madrina</option>
                             <option value="Traspaso" {{ old('Tipo', $entrada->Tipo) == 'Traspaso' ? 'selected' : '' }}>Traspaso</option>
                         </x-adminlte-select>
+                        {{-- Agregamos un campo oculto con el nombre correcto para que Laravel reciba el valor --}}
+                        <input type="hidden" name="Tipo" value="{{ old('Tipo', $entrada->Tipo) }}">
                     </div>
+                    
                 </div>
             </div>
         </div>
@@ -85,7 +107,7 @@
             <div class="card-body">
                 <x-adminlte-textarea name="Observaciones" label="Observaciones">{{ old('Observaciones', $entrada->Observaciones) }}</x-adminlte-textarea>
                 <x-adminlte-button id="btn-guardar" label="Actualizar Entrada" theme="success" icon="fas fa-save" type="submit" />
-                <a href="{{ route('admin.vehiculos') }}" class="btn btn-secondary ml-2">Cancelar</a>
+                <a href="{{ route('admin.entradas') }}" class="btn btn-secondary ml-2">Cancelar</a>
             </div>
         </div>
     </form>
@@ -140,6 +162,10 @@
                         checklistContainer.innerHTML = `<p class="text-danger">No hay checklist disponible para este tipo.</p>`;
                         return;
                     }
+
+                    const fechaRevisionFormato = data.fecha_revision 
+                    ? data.fecha_revision.substring(0, 16).replace(' ', 'T') 
+                    : '';
 
                     const html = `
                         <input type="hidden" name="documentos_completos" value="0">
@@ -214,10 +240,11 @@
                             <input type="text" class="form-control" name="recibido_por" value="${escapeHtml(getValue(checklist?.recibido_por, data.recibido_por))}">
                         </div>
 
-                        <div class="form-group">
-                            <label>Fecha Revisión</label>
-                            <input type="date" class="form-control" name="fecha_revision" value="${escapeHtml(getValue(checklist?.fecha_revision, data.fecha_revision))}">
-                        </div>
+                         <div class="form-group">
+                         <label>Fecha Revisión</label>
+                         {{-- Cambiamos type="date" a type="datetime-local" --}}
+                         <input type="datetime-local" class="form-control" name="fecha_revision" value="${data.fecha_revision || ''}">
+                     </div>
                     `;
 
                     checklistContainer.innerHTML = html;

@@ -16,7 +16,7 @@
             <div class="card-body">
 
                 {{-- FORMULARIO DE FILTRO --}}
-                <form method="GET" action="{{ route('admin.vehiculos') }}" class="mb-4">
+                <form method="GET" action="{{ route('vehiculos.index') }}" class="mb-4">
                     <div class="row">
                         <div class="col-md-3">
                             <input type="text" name="vin" class="form-control" placeholder="Buscar por VIN" value="{{ request('vin') }}">
@@ -46,7 +46,7 @@
                             <button type="submit" class="btn btn-secondary">
                                 <i class="fas fa-search"></i> Buscar
                             </button>
-                            <a href="{{ route('admin.vehiculos') }}" class="btn btn-secondary">
+                            <a href="{{ route('vehiculos.index') }}" class="btn btn-secondary">
                                 <i class="fas fa-eraser"></i> Limpiar
                             </a>
                         </div>
@@ -55,7 +55,7 @@
 
                 {{-- BOTONES PARA ACCIONES ADICIONALES --}}
                 <div class="mb-4 d-flex gap-2">
-                    <a href="{{ route('admin.entradas.create') }}" class="btn btn-secondary">
+                    <a href="{{ route('entradas.create') }}" class="btn btn-secondary">
                         <i class="fas fa-plus"></i> Agregar Vehículo
                     </a>
 
@@ -95,7 +95,7 @@
                                     <td>{{ $vehiculo->Caracteristicas }}</td>
                                     <td>{{ $vehiculo->Color }}</td>
                                     <td>{{ $vehiculo->Modelo }}</td>
-                                    <td>{{ optional($vehiculo->ultimaEntrada)->Fecha_entrada ?? 'Sin entrada' }}</td>
+                                    <td>{{ optional($vehiculo->ultimaEntradatipo)->created_at?->format('Y-m-d H:i') ?? 'Sin entrada' }}</td>
 
                                     {{-- Estado físico --}}
                                     <td>
@@ -121,30 +121,23 @@
                                         @endif
                                     </td>
 
+                                    <td>{{ $vehiculo->almacen->Nombre ?? 'No asignado' }}</td>
 
-                                    <td>{{ optional(optional($vehiculo->ultimaEntrada)->almacenEntrada)->Nombre ?? 'No asignado' }}</td>
                                     <td>{{ optional($vehiculo->ultimaEntradatipo)->Tipo ?? 'Sin entrada' }}</td>
                                     <td>{{ $vehiculo->Proximo_mantenimiento }}</td>
                                     
                                     <td class="text-center">
                                         <div class="btn-group" role="group">
-                                            @if ($vehiculo->ultimaEntrada)
-                                                {{-- <a href="{{ route('entradas.edit', $vehiculo->ultimaEntrada->No_orden) }}" class="btn btn-warning btn-sm" title="Editar Entrada">
-                                                    <i class="fas fa-edit"></i>
-                                                </a> --}}
-                                                {{-- <a href="{{ route('vehiculos.edit', $vehiculo->VIN) }}" class="btn btn-warning btn-sm" title="Editar Entrada">
-                                                    <i class="fas fa-edit"></i>
-                                                </a> --}}
+                                            @if ($vehiculo->ultimaEntradatipo)
+                                                
                                                 <a href="{{ route('vehiculos.edit', $vehiculo->VIN) }}" class="btn btn-warning btn-sm" title="Editar Entrada">
                                                     <i class="fas fa-edit"></i>
                                                 </a>
-
-                                                <a href="{{ route('entradasimprimir', ['id' => $vehiculo->ultimaEntrada->No_orden]) }}" target="_blank" class="btn btn-primary btn-sm" title="Imprimir Entrada">
-                                                    <i class="fas fa-print"></i>
-                                                </a>
-
-                                                
-
+                                                    <a href="{{ route('vehiculoimprimir', $vehiculo->VIN) }}" 
+                                                        class="btn btn-primary btn-sm" 
+                                                        >
+                                                            <i class="fas fa-file-pdf"></i> Ver ficha
+                                                    </a>
                                                 {{-- Botón Eliminar --}}
                                                 <form action="{{ route('vehiculos.destroy', $vehiculo->VIN) }}" method="POST" onsubmit="return confirm('¿Eliminar vehículo y todas sus entradas?')" style="display:inline;">
                                                     @csrf
@@ -179,6 +172,9 @@
         </div>
     </div>
 @stop
+
+
+
 @section('js')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
@@ -187,7 +183,7 @@
             Swal.fire({
                 icon: 'success',
                 title: '¡Éxito!',
-                text: '{{ session('success') }}',
+                text: @json(session('success')),
                 confirmButtonColor: '#3085d6',
                 confirmButtonText: 'OK'
             });
@@ -199,13 +195,10 @@
             Swal.fire({
                 icon: 'error',
                 title: '¡Oops!',
-                text: '{{ session('error') }}',
+                text: @json(session('error')), 
                 confirmButtonColor: '#d33',
                 confirmButtonText: 'OK'
             });
         </script>
     @endif
 @stop
-
-
-

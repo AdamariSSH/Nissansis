@@ -7,6 +7,8 @@ namespace App\Http\Controllers;
 use App\Models\Checklist;
 use App\Models\Entrada;
 use Illuminate\Http\Request;
+use App\Models\Vehiculo;
+use Illuminate\Support\Facades\DB;
 
 class ChecklistController extends Controller
 {
@@ -17,8 +19,7 @@ class ChecklistController extends Controller
         return view('checklists.create', compact('entrada'));
     }
 
-    // Guardar un checklist en la base de datos
-    public function store(Request $request)
+        public function store(Request $request)
     {
         $validated = $request->validate([
             'No_orden_entrada'    => 'required|exists:entradas,No_orden',
@@ -37,11 +38,47 @@ class ChecklistController extends Controller
             'fecha_revision'      => 'nullable|date',
         ]);
 
-        Checklist::create($validated);
+        //  Lógica de Transacción y Actualización
+        DB::beginTransaction();
+        try {
+            //  Crear el registro del Checklist
+            Checklist::create($validated);
 
-        return redirect()->route('entradas.show', $validated['No_orden_entrada'])
-                         ->with('success', 'Checklist guardado correctamente.');
+            //  Determinar el nuevo estado del vehículo
+            $newVehicleState = 'Disponible';
+            // Si el exterior O el interior son Regular/Malo, el vehículo requiere mantenimiento
+            if ($validated['estado_exterior'] === 'Regular' || $validated['estado_exterior'] === 'Malo' ||
+                $validated['estado_interior'] === 'Regular' || $validated['estado_interior'] === 'Malo') {
+                $newVehicleState = 'Mantenimiento';
+            }
+            
+            //  Obtener la Entrada para el VIN
+            $entrada = Entrada::findOrFail($validated['No_orden_entrada']);
+            
+            //  Actualizar la Entrada
+            $entrada->estatus = 'confirmada'; // Cambia el estatus de la entrada a 'confirmada'
+            $entrada->save();
+
+            //  Actualizar el Vehículo (estado y estatus de inventario)
+            Vehiculo::where('VIN', $entrada->VIN)->update([
+                'Estado' => $newVehicleState,
+                'estatus' => 'En almacén', // Pasa de 'pendiente salida' a 'En almacén'
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('entradas.show', $validated['No_orden_entrada'])
+                             ->with('success', 'Checklist guardado y Entrada confirmada correctamente.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()
+                             ->withInput()
+                             ->with('error', 'Error al guardar el Checklist: ' . $e->getMessage());
+        }
     }
+
+
 
     // Mostrar checklist individual
     public function show($id)
@@ -57,12 +94,14 @@ class ChecklistController extends Controller
         return view('checklists.edit', compact('checklist'));
     }
 
+
     // Actualizar checklist existente
     public function update(Request $request, $id)
     {
         $checklist = Checklist::findOrFail($id);
 
         $validated = $request->validate([
+            // ... (validación sin cambios) ...
             'tipo_checklist'      => 'required|in:Madrina,Traspaso,Recepcion',
             'documentos_completos'=> 'required|boolean',
             'accesorios_completos'=> 'required|boolean',
@@ -78,10 +117,39 @@ class ChecklistController extends Controller
             'fecha_revision'      => 'nullable|date',
         ]);
 
-        $checklist->update($validated);
+        // Lógica de Transacción y Actualización
+        DB::beginTransaction();
+        try {
+            // Actualizar el registro del Checklist
+            $checklist->update($validated);
+            
+            // Determinar el nuevo estado del vehículo (la misma lógica que en store)
+            $newVehicleState = 'Disponible';
+            if ($validated['estado_exterior'] === 'Regular' || $validated['estado_exterior'] === 'Malo' ||
+                $validated['estado_interior'] === 'Regular' || $validated['estado_interior'] === 'Malo') {
+                $newVehicleState = 'Mantenimiento';
+            }
 
-        return redirect()->route('checklists.show', $checklist->id_checklist)
-                         ->with('success', 'Checklist actualizado correctamente.');
+            // Obtener la Entrada y el Vehículo relacionados
+            $entrada = Entrada::findOrFail($checklist->No_orden_entrada);
+            
+            //  Actualizar el Vehículo (estado y estatus de inventario)
+            Vehiculo::where('VIN', $entrada->VIN)->update([
+                'Estado' => $newVehicleState,
+                'estatus' => 'En almacén', // Asegurarse que el estatus de inventario sea 'En almacén'
+            ]);
+            
+            DB::commit();
+
+            return redirect()->route('checklists.show', $checklist->id_checklist)
+                             ->with('success', 'Checklist y Estado del Vehículo actualizados correctamente.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()
+                             ->withInput()
+                             ->with('error', 'Error al actualizar el Checklist: ' . $e->getMessage());
+        }
     }
 
     //  Retornar estructura de checklist para tipo dinámico (AJAX)

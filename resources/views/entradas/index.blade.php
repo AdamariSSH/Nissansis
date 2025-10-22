@@ -50,7 +50,7 @@
                                 <td>{{ $entrada->VIN }}</td>
                                 <td>{{ $entrada->almacenSalida->Nombre ?? 'N/A' }}</td>
                                 <td>{{ $entrada->almacenEntrada->Nombre ?? 'N/A' }}</td>
-                                <td>{{ $entrada->Fecha_entrada }}</td>
+                                <td>{{ $entrada->created_at->format('d/m/Y H:i') }}</td>
 
                                 {{-- Estado del vehículo (después del checklist) --}}
                                 <td>
@@ -82,7 +82,15 @@
                                     <a href="{{ route('entradas.edit', $entrada->No_orden) }}" class="btn btn-sm btn-primary" title="Editar">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    <a href="{{ route('entradasimprimir', ['id' => $entrada->No_orden]) }}" target="_blank" class="btn btn-sm btn-secondary" title="Imprimir">
+                                    {{-- <a href="{{ route('entradasimprimir', ['id' => $entrada->No_orden]) }}" target="_blank" class="btn btn-sm btn-secondary" title="Imprimir">
+                                        <i class="fas fa-print"></i>
+                                    </a> --}}
+                                   {{-- <a href="{{ route('entradasimprimir', ['id' => $entrada->No_orden]) }}" 
+                                    target="_blank" class="btn btn-sm btn-secondary" title="Imprimir">
+                                    <i class="fas fa-print"></i>
+                                    </a> --}}
+                                    <a href="{{ route('entradasimprimir', ['id' => $entrada->No_orden]) }}" 
+                                        class="btn btn-sm btn-secondary" title="Imprimir">
                                         <i class="fas fa-print"></i>
                                     </a>
 

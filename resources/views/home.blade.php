@@ -32,7 +32,7 @@
 
         {{-- Entradas pendientes --}}
         <div class="col-md-3 col-sm-6 col-12">
-            <a href="{{ route('admin.entradas', ['estatus' => 'pendiente']) }}" class="text-decoration-none">
+            <a href="{{ route('entradas.index', ['estatus' => 'pendiente']) }}" class="text-decoration-none">
                 <div class="info-box">
                     <span class="info-box-icon bg-warning"><i class="fas fa-sign-in-alt"></i></span>
                     <div class="info-box-content">
@@ -58,7 +58,7 @@
 
         {{-- Total vehículos --}}
         <div class="col-md-3 col-sm-6 col-12">
-            <a href="{{ route('admin.vehiculos') }}" class="text-decoration-none">
+            <a href="{{ route('vehiculos.index') }}" class="text-decoration-none">
                 <div class="info-box">
                     <span class="info-box-icon bg-info"><i class="fas fa-car"></i></span>
                     <div class="info-box-content">
@@ -71,7 +71,7 @@
 
         {{-- Total almacenes --}}
         <div class="col-md-3 col-sm-6 col-12">
-            <a href="{{ route('almacen') }}" class="text-decoration-none">
+            <a href="{{ route('almacen.index') }}" class="text-decoration-none">
                 <div class="info-box">
                     <span class="info-box-icon bg-secondary"><i class="fas fa-warehouse"></i></span>
                     <div class="info-box-content">
@@ -92,16 +92,7 @@
                 </div>
             </div>
         </div>
-        {{-- Vehículos en mantenimiento --}}
-<div class="col-md-3 col-sm-6 col-12">
-    <div class="info-box">
-        <span class="info-box-icon bg-success"><i class="fas fa-hammer"></i></span>
-        <div class="info-box-content">
-            <span class="info-box-text">Mantenimiento</span>
-            <span class="info-box-number">{{ $vehiculosMantenimiento }}</span>
-        </div>
-    </div>
-</div>
+
 
         {{-- Stock actual --}}
         <div class="col-md-3 col-sm-6 col-12">

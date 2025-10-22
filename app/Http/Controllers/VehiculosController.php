@@ -5,13 +5,19 @@ use Illuminate\Http\Request;
 use App\Models\Vehiculo;
 use App\Models\Almacen;
 use App\Models\Entrada;
+use App\Models\Salida;
+use App\Models\Checklist;
+use App\Models\ChecklistSalida;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+
+
 
 class VehiculosController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Vehiculo::with(['almacen', 'ultimaEntrada']);
+        $query = Vehiculo::with(['almacen', 'ultimaEntradatipo']);
 
         if ($request->filled('vin')) {
             $query->where('VIN', 'like', '%' . $request->vin . '%');
@@ -32,7 +38,7 @@ class VehiculosController extends Controller
         $vehiculos = $query->paginate(10)->appends($request->all());
         $almacenes = Almacen::all();
 
-        return view('Vehiculos', compact('vehiculos', 'almacenes'));
+        return view('Vehiculos.index', compact('vehiculos', 'almacenes'));
     }
 
     public function destroy($vin)
@@ -48,7 +54,7 @@ class VehiculosController extends Controller
 
         $vehiculo->delete();
 
-        return redirect()->route('admin.vehiculos')->with('success', 'Vehículo eliminado correctamente');
+        return redirect()->route('vehiculos.index')->with('success', 'Vehículo eliminado correctamente');
     }
 
     public function edit($vin)
@@ -60,8 +66,8 @@ class VehiculosController extends Controller
         $entradas = $vehiculo->entradas()->with('almacenEntrada')->get();
         $salidas = $vehiculo->salidas()->with('almacenSalida')->get();
 
-        //  Pasar entradas y salidas a la vista
-        return view('vehiculosedit', compact('vehiculo', 'almacenes', 'entradas', 'salidas'));
+        // Pasar entradas y salidas a la vista
+        return view('vehiculos.edit', compact('vehiculo', 'almacenes', 'entradas', 'salidas'));
     }
 
     public function update(Request $request, $vin)
@@ -83,11 +89,11 @@ class VehiculosController extends Controller
 
         $vehiculo->update($request->except('VIN'));
 
-        return redirect()->route('admin.vehiculos')
+        return redirect()->route('vehiculos.index')
                          ->with('success', 'Vehículo actualizado correctamente');
     }
 
-    //  Nuevo método show para poder usar $entradas y $salidas en una vista separada
+    // Nuevo método show para poder usar $entradas y $salidas en una vista separada
     public function show($vin)
     {
         $vehiculo = Vehiculo::with(['entradas.almacen', 'salidas.almacenSalida'])->findOrFail($vin);
@@ -97,4 +103,82 @@ class VehiculosController extends Controller
 
         return view('vehiculos.show', compact('vehiculo', 'entradas', 'salidas'));
     }
+
+
+
+
+        public function ImprimirVehiculo($vin)
+        {
+            // Buscamos el vehículo
+            $vehiculo = Vehiculo::with('almacen')->findOrFail($vin);
+
+            // CORRECCIÓN 1: Usamos 'updated_at'. Este es el campo más preciso para rastrear
+            // el momento real en que el movimiento fue CONFIRMADO (es decir, cuando terminó el traspaso).
+            $ultimaEntrada = Entrada::where('VIN', $vin)->latest('updated_at')->first();
+            $ultimaSalida  = Salida::where('VIN', $vin)->latest('updated_at')->first();
+
+            //Log de depuración (Ajustar para updated_at)
+            Log::info("=== DEPURACIÓN ImprimirVehiculo ===", [
+                'VIN' => $vin,
+                'entrada_fecha' => optional($ultimaEntrada)->updated_at, // Mostrar updated_at
+                'salida_fecha' => optional($ultimaSalida)->updated_at,   // Mostrar updated_at
+            ]);
+
+            $ultimoMovimiento = null;
+            $tipoMovimiento = null;
+            $checklist = null;
+
+            //  Comparación de fechas
+            if ($ultimaEntrada && $ultimaSalida) {
+                //  CORRECCIÓN 2: Usamos el comparador MAYOR O IGUAL (>=).
+                // Esto garantiza que si las fechas son idénticas (empate),
+                // se priorice la ENTRADA, ya que es el estado funcional final del vehículo.
+                if ($ultimaEntrada->updated_at >= $ultimaSalida->updated_at) {
+                    $ultimoMovimiento = $ultimaEntrada;
+                    $tipoMovimiento = 'entrada';
+                    $checklist = Checklist::where('No_orden_entrada', $ultimaEntrada->No_orden)->first();
+                } else {
+                    // Esto solo se ejecutará si la Salida es estrictamente posterior a la Entrada
+                    $ultimoMovimiento = $ultimaSalida;
+                    $tipoMovimiento = 'salida';
+                    $checklist = ChecklistSalida::where('No_orden_salida', $ultimaSalida->No_orden_salida)->first();
+                }
+            } elseif ($ultimaEntrada) {
+                $ultimoMovimiento = $ultimaEntrada;
+                $tipoMovimiento = 'entrada';
+                $checklist = Checklist::where('No_orden_entrada', $ultimaEntrada->No_orden)->first();
+            } elseif ($ultimaSalida) {
+                $ultimoMovimiento = $ultimaSalida;
+                $tipoMovimiento = 'salida';
+                $checklist = ChecklistSalida::where('No_orden_salida', $ultimaSalida->No_orden_salida)->first();
+            }
+
+            // Log del resultado final (Ajustar para updated_at)
+            Log::info("Resultado del último movimiento", [
+                'tipo' => $tipoMovimiento,
+                'No_orden' => optional($ultimoMovimiento)->No_orden ?? optional($ultimoMovimiento)->No_orden_salida,
+                'fecha_movimiento' => optional($ultimoMovimiento)->updated_at,
+            ]);
+
+            if (!$ultimoMovimiento) {
+                return back()->with('error', 'Este vehículo aún no tiene movimientos registrados.');
+            }
+
+            // Retornar vista
+            return view('ordenes.vehiculoimprimir', compact('vehiculo', 'ultimoMovimiento', 'tipoMovimiento', 'checklist'));
+        }
+
+        public function buscarVin(Request $request)
+        {
+            $query = $request->input('query');
+
+            $vehiculos = \App\Models\Vehiculo::where('VIN', 'LIKE', "%{$query}%")
+                ->orWhere('Modelo', 'LIKE', "%{$query}%")
+                ->orWhere('Color', 'LIKE', "%{$query}%")
+                ->limit(10)
+                ->get(['VIN', 'Modelo', 'Color']);
+
+            return response()->json($vehiculos);
+        }
+
 }

@@ -34,4 +34,7 @@ class ChecklistSalida extends Model
     {
         return $this->belongsTo(Salida::class, 'No_orden_salida', 'No_orden_salida');
     }
+
+
+
 }

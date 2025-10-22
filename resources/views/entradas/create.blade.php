@@ -37,19 +37,7 @@
                     <div class="col-md-4">
                         <x-adminlte-input name="Kilometraje_entrada" label="Kilometraje" type="number" value="0" />
                     </div>
-                     {{-- <div class="col-md-4">
-                        <x-adminlte-input name="Coordinador_Logistica" label="Coordinador de Logística" required />
-                    </div> --}}
-                    
-
-                    <!-- Almacén y tipo -->
-                    {{-- <div class="col-md-4">
-                        <x-adminlte-select name="Almacen_entrada" label="Almacén Entrada" required>
-                            @foreach ($almacenes as $almacen)
-                                <option value="{{ $almacen->Id_Almacen }}">{{ $almacen->Nombre }}</option>
-                            @endforeach
-                        </x-adminlte-select>
-                    </div> --}}
+                     
                     <div class="col-md-4">
                         @if(auth()->user()->isAdmin())
                             {{-- Admin: puede elegir cualquier almacén --}}
@@ -65,16 +53,7 @@
                         @endif
                     </div>
 
-                    <div class="col-md-4">
-                        {{-- <x-adminlte-input name="Fecha_entrada" label="Fecha Entrada" type="date" /> --}}
-                        <x-adminlte-input 
-                            type="date" 
-                            name="Fecha" 
-                            label="Fecha Salida"  
-                            value="{{ \Carbon\Carbon::now('America/Mexico_City')->format('Y-m-d') }}" 
-                            required 
-                        />
-                    </div>
+
                     <div class="col-md-4">
                         <x-adminlte-select name="Tipo" label="Tipo Entrada" id="tipo" required>
                             <option value="">Seleccione...</option>
@@ -112,7 +91,7 @@
                 <x-adminlte-button id="btn-guardar" label="Guardar Entrada" theme="success" icon="fas fa-save" type="submit" />
 
 
-                <a href="{{ route('admin.vehiculos') }}" class="btn btn-secondary ml-2">Cancelar</a>
+                <a href="{{ route('vehiculos.index') }}" class="btn btn-secondary ml-2">Cancelar</a>
             </div>
         </div>
     </form>
@@ -149,6 +128,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     container.innerHTML = `<p class="text-danger">No hay checklist disponible para este tipo.</p>`;
                     return;
                 }
+             
+                 const fechaRevisionFormato = data.fecha_revision 
+                    ? data.fecha_revision.substring(0, 16).replace(' ', 'T') 
+                    : '';
+             
 
                 let html = `
                     <input type="hidden" name="documentos_completos" value="0">
@@ -223,10 +207,12 @@ document.addEventListener('DOMContentLoaded', function () {
                         <input type="text" class="form-control" name="recibido_por" value="${data.recibido_por || ''}">
                     </div>
 
-                    <div class="form-group">
+                    
+                     <div class="form-group">
                         <label>Fecha Revisión</label>
-                        <input type="date" class="form-control" name="fecha_revision" value="${data.fecha_revision || ''}">
-                    </div>
+                        {{-- Usa la variable formateada para cargar el valor --}}
+                        <input type="datetime-local" class="form-control" name="fecha_revision" value="${fechaRevisionFormato}">
+                     </div>
                 `;
 
                 container.innerHTML = html;

@@ -328,25 +328,51 @@ return [
             'label_color' => 'success',
         ],
         ['header' => 'Menú'],
-        [
+                [
             'text' => 'Administrador',
-            'url' => 'admin/settings',
-            'icon' => 'fas fa-fw fa-user',
+            'icon' => 'fas fa-fw fa-boxes',
+            'submenu' => [
+                [
+                    'header' => 'Gestión de Usuarios',
+                ],
+                [
+                    'text' => 'Usuarios',
+                    'url'  => '/admin/usuarios', 
+                    'icon' => 'fas fa-user',
+                ],
+                [
+                    'text' => 'Roles y Permisos',
+                    'url'  => '/admin/roles',
+                    'icon' => 'fas fa-lock',
+                ],
+
+                 [
+            'header' => 'Catálogos Base',
+                ],
+                [
+                    'text' => 'Vehículos / Modelos',
+                    'url'  => '/admin/catalogos/vehiculos',
+                    'icon' => 'fas fa-car-side',
+                ],
+            ],
         ],
+
+
+
         [
             'text' => 'Vehiculos',
-            'url' => '/admin/vehiculos',
+            'url' => '/vehiculos',
             'icon' => 'fas fa-car',
         ],
         [
             'text' => 'Entradas',
-            'url' => 'admin/entradas',
+            'url' => 'entradas',
             'icon' => 'fas fa-sign-in-alt',
         ],
         [
             'text' => 'Salidas',
-            'url' => '/admin/salidas',
-            'icon' => 'fas fa-sign-out-alt',
+            'url' => '/salidas', // Esto debe ser /salidas, no /admin/salidas
+            'icon' => 'fas fa-sign-out-alt'
         ],
         [
             'text' => 'Reportes',
@@ -377,22 +403,22 @@ return [
                 ],
             ],
         ],
-        ['header' => 'labels'],
-        [
-            'text' => 'important',
-            'icon_color' => 'red',
-            'url' => '#',
-        ],
-        [
-            'text' => 'warning',
-            'icon_color' => 'yellow',
-            'url' => '#',
-        ],
-        [
-            'text' => 'information',
-            'icon_color' => 'cyan',
-            'url' => '#',
-        ],
+        // ['header' => 'labels'],
+        // [
+        //     'text' => 'important',
+        //     'icon_color' => 'red',
+        //     'url' => '#',
+        // ],
+        // [
+        //     'text' => 'warning',
+        //     'icon_color' => 'yellow',
+        //     'url' => '#',
+        // ],
+        // [
+        //     'text' => 'information',
+        //     'icon_color' => 'cyan',
+        //     'url' => '#',
+        // ],
     ],
 
     /*

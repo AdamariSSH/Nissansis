@@ -16,7 +16,7 @@ class Vehiculo extends Model
 
     protected $fillable = [
         'VIN', 'Motor', 'Caracteristicas', 'Color', 'Modelo',
-        'Almacen_entrada', 'Fecha_entrada', 'Historial',
+        'Almacen_entrada', 'Historial',
         'Proximo_mantenimiento', 'Tipo', 'Estado','estatus',
         'Coordinador_Logistica', 'Almacen_actual'
     ];
@@ -27,31 +27,19 @@ class Vehiculo extends Model
         return $this->hasMany(Entrada::class, 'VIN', 'VIN');
     }
 
-
-
-    // Última entrada del vehículo (para mostrar en el listado)
-   public function ultimaEntrada()
-    {
-    return $this->hasOne(Entrada::class, 'VIN', 'VIN')->orderByDesc('No_orden');
-    }
-    // Relación con el almacén actual
     public function almacen()
     {
         return $this->belongsTo(Almacen::class, 'Almacen_actual', 'Id_Almacen');
     }
    public function ultimaEntradatipo()
     {
-        return $this->hasOne(Entrada::class, 'VIN', 'VIN')->latestOfMany('Fecha_entrada');
+         return $this->hasOne(Entrada::class, 'VIN', 'VIN')->latestOfMany('created_at');
     }
     
      public function salidas()
     {
         return $this->hasMany(Salida::class, 'VIN', 'VIN');
     }
-    
-    
-    
 
- 
 
 }

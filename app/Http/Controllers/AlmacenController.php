@@ -34,14 +34,14 @@ class AlmacenController extends Controller
     ]);
 
     // Redirigir a la lista de almacenes
-    return redirect()->route('almacen')->with('success', 'Almacén creado exitosamente.'); // Asegúrate de que la ruta sea correcta
+    return redirect()->route('almacen.index')->with('success', 'Almacén creado exitosamente.'); // Asegúrate de que la ruta sea correcta
     }
 
     //Eliminar el almacen
     public function destroy($id){
         $almacen = Almacen::find($id);
         $almacen->delete();
-        return redirect()->route('almacen');
+        return redirect()->route('almacen.index');
     }
 
 
@@ -70,7 +70,7 @@ class AlmacenController extends Controller
         ]);
 
         // Redirigir a la lista de almacenes con un mensaje de éxito
-        return redirect()->route('almacen')->with('success', 'Almacén actualizado exitosamente.');
+        return redirect()->route('almacen.index')->with('success', 'Almacén actualizado exitosamente.');
     }
 
 

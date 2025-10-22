@@ -28,7 +28,7 @@ class HomeController extends Controller
     $stockActual = Vehiculo::where('estatus', 'En almacén')->count();
 
     // Entradas y salidas del día
-    $entradasHoy = Entrada::whereDate('Fecha_entrada', Carbon::today())->count();
+    $entradasHoy = Entrada::whereDate('created_at', Carbon::today())->count();
     $salidasHoy = Salida::whereDate('Fecha', Carbon::today())->count();
 
     // Vehículos con mantenimiento HOY o en los próximos 7 días
@@ -37,6 +37,8 @@ class HomeController extends Controller
     'Proximo_mantenimiento',
     [$hoy, $hoy->copy()->addDays(30)]
     )->count();
+
+
     //$vehiculosMantenimiento = Vehiculo::whereDate('Proximo_mantenimiento', '>=', $hoy)->count();
 
     // $vehiculosHoy = Vehiculo::whereDate('Proximo_mantenimiento', $hoy)->count();
@@ -45,8 +47,8 @@ class HomeController extends Controller
     // $vehiculosMantenimiento = $vehiculosHoy + $vehiculosProximos;
 
     // Entradas por mes (año actual)
-    $entradasMes = Entrada::selectRaw('MONTH(Fecha_entrada) as mes, COUNT(*) as total')
-        ->whereYear('Fecha_entrada', Carbon::now()->year)
+    $entradasMes = Entrada::selectRaw('MONTH(created_at) as mes, COUNT(*) as total')
+        ->whereYear('created_at', Carbon::now()->year)
         ->groupBy('mes')
         ->orderBy('mes')
         ->pluck('total','mes');

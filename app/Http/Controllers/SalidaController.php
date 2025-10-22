@@ -11,15 +11,21 @@ use App\Models\ChecklistSalida;
 use Illuminate\Database\QueryException; 
 use Illuminate\Support\Facades\DB;
 
+
+use BaconQrCode\Writer;
+use BaconQrCode\Renderer\ImageRenderer;
+use BaconQrCode\Renderer\Image\SvgImageBackEnd;
+use BaconQrCode\Renderer\RendererStyle\RendererStyle;
+
 class SalidaController extends Controller
 {
     public function index(Request $request)
         {
             $user = auth()->user();
-            $estatus = $request->get('estatus'); // 👈 aquí recibimos si viene "pendiente"
+            $estatus = $request->get('estatus'); 
 
             $query = Salida::with('almacen')
-                        ->orderBy('Fecha', 'desc');
+                         ->orderBy('Fecha', 'desc');
 
             if ($user->role !== 'admin') {
                 // Usuario normal solo ve las salidas de su almacén
@@ -33,17 +39,16 @@ class SalidaController extends Controller
 
             $salidas = $query->paginate(10);
 
-            return view('salidas', compact('salidas'));
+            return view('salidas.index', compact('salidas'));
         }
 
-   
-
-    //  Nuevo helper para obtener último checklist
+    
+    // Nuevo helper para obtener último checklist
     private function obtenerUltimoChecklist($vin)
     {
         // Última entrada
         $ultimaEntrada = Entrada::where('VIN', $vin)
-            ->latest('Fecha_entrada')
+            ->latest('created_at')
             ->first();
 
         // Última salida
@@ -92,28 +97,30 @@ class SalidaController extends Controller
             }
         }
 
-        return view('vehiculossalidas', compact('almacenes', 'vehiculo', 'ultimoChecklist'));
+        return view('salidas.create', compact('almacenes', 'vehiculo', 'ultimoChecklist'));
     }
 
     public function getVehiculoData($vin)
     {
-        $vehiculo = Vehiculo::with('almacen')->find($vin);
+    
+        $vehiculo = Vehiculo::with('almacen')->where('VIN', $vin)->first();
+
 
         if (!$vehiculo) {
-            return response()->json(['error' => 'Vehículo no encontrado']);
+        return response()->json(['error' => 'Vehículo no encontrado']);
         }
 
         $ultimoChecklist = $this->obtenerUltimoChecklist($vin);
 
         if ($ultimoChecklist) {
-            $ultimoChecklist->fecha_revision = $ultimoChecklist->fecha_revision
-                ? \Carbon\Carbon::parse($ultimoChecklist->fecha_revision)->format('Y-m-d')
-                : null;
+        $ultimoChecklist->fecha_revision = $ultimoChecklist->fecha_revision
+        ? \Carbon\Carbon::parse($ultimoChecklist->fecha_revision)->format('Y-m-d')
+        : null;
         }
 
         return response()->json([
-            'vehiculo' => $vehiculo,
-            'checklist' => $ultimoChecklist
+        'vehiculo' => $vehiculo,
+        'checklist' => $ultimoChecklist
         ]);
     }
 
@@ -141,14 +148,14 @@ class SalidaController extends Controller
                 throw new \Exception("El vehículo está en tránsito y no puede generar otra salida hasta que se registre la entrada en el almacén de destino.");
             }
 
-            //  Bloquear si ya tiene una salida sin entrada posterior
+            // Bloquear si ya tiene una salida sin entrada posterior
             $ultimaSalida = Salida::where('VIN', $request->VIN)
                 ->latest('Fecha')
                 ->first();
 
             if ($ultimaSalida && in_array($ultimaSalida->Tipo_salida, ['Traspaso', 'Devolucion'])) {
                 $entradaPosterior = Entrada::where('VIN', $request->VIN)
-                    ->where('Fecha_entrada', '>', $ultimaSalida->Fecha)
+                    ->where('created_at', '>', $ultimaSalida->Fecha)
                     ->where('Almacen_entrada', $ultimaSalida->Almacen_entrada)
                     ->first();
 
@@ -157,14 +164,14 @@ class SalidaController extends Controller
                 }
             }
 
-            //  No permitir salidas si ya está vendido
+            // No permitir salidas si ya está vendido
             if ($vehiculo->Estado === 'Vendido') {
                 throw new \Exception("El vehículo ya fue vendido y no puede generar más salidas.");
             }
 
             // Obtener última entrada (para relación con salida)
             $ultimaEntrada = Entrada::where('VIN', $request->VIN)
-                ->latest('Fecha_entrada')
+                ->latest('created_at')
                 ->first();
 
             // Crear salida
@@ -184,22 +191,22 @@ class SalidaController extends Controller
 
             // Crear checklist de salida
             $salida->checklistSalida()->create([
-                'No_orden_salida' => $salida->No_orden_salida,
-                'documentos_completos' => $request->documentos_completos,
-                'accesorios_completos' => $request->accesorios_completos,
-                'estado_exterior' => $request->estado_exterior,
-                'estado_interior' => $request->estado_interior,
-                'pdi_realizada' => $request->pdi_realizada,
-                'seguro_vigente' => $request->seguro_vigente,
-                'nfc_instalado' => $request->nfc_instalado,
-                'gps_instalado' => $request->gps_instalado,
-                'folder_viajero' => $request->folder_viajero,
-                'observaciones' => $request->observaciones_checklist,
-                'recibido_por' => $request->recibido_por,
-                'fecha_revision' => $request->fecha_revision,
+            'No_orden_salida' => $salida->No_orden_salida,
+            'documentos_completos' => $request->input('documentos_completos', 0),
+            'accesorios_completos' => $request->input('accesorios_completos', 0),
+            'estado_exterior' => $request->estado_exterior,
+            'estado_interior' => $request->estado_interior,
+            'pdi_realizada' => $request->input('pdi_realizada', 0),
+            'seguro_vigente' => $request->input('seguro_vigente', 0),
+            'nfc_instalado' => $request->input('nfc_instalado', 0),
+            'gps_instalado' => $request->input('gps_instalado', 0),
+            'folder_viajero' => $request->input('folder_viajero', 0),
+            'observaciones' => $request->observaciones_checklist,
+            'recibido_por' => $request->recibido_por,
+            'fecha_revision' => $request->fecha_revision,
             ]);
 
-            //  Actualizar estatus según tipo de salida
+            // Actualizar estatus según tipo de salida
             if ($request->Tipo_salida === 'Venta') {
                 $salida->estatus = 'confirmada';
                 $salida->save();
@@ -216,19 +223,20 @@ class SalidaController extends Controller
                     'VIN' => $request->VIN,
                     'Almacen_entrada' => $request->Almacen_entrada,
                     'Almacen_salida' => $request->Almacen_salida,
-                    'Fecha_entrada' => now(),
+                    'created_at' => now(),
                     'Tipo' => $request->Tipo_salida,
                     'estatus' => 'pendiente',
                     'Coordinador_Logistica' => auth()->user()->name,
                 ]);
 
-                $salida->estatus = 'pendiente';
+                // *** MODIFICACIÓN APLICADA AQUÍ ***
+                $salida->estatus = 'confirmada'; // La salida del almacén de origen se confirma.
                 $salida->save();
             }
 
             DB::commit();
 
-            return redirect()->route('admin.vehiculos')
+            return redirect()->route('salidas.index')
                 ->with('success', 'Salida registrada correctamente con su checklist.');
 
         } catch (QueryException $e) {
@@ -244,5 +252,40 @@ class SalidaController extends Controller
             DB::rollBack();
             return redirect()->back()->with('error', $e->getMessage());
         }
+    }
+
+
+    public function imprimirOrdenSalida($id)
+    {
+        // Cargar la salida con vehículo y almacén
+        $salida = Salida::with(['vehiculo', 'almacenSalida'])
+            ->where('No_orden_salida', $id)
+            ->first();
+
+        if (!$salida) {
+            dd("No se encontró la salida con ID: " . $id);
+        }
+
+        // Generar QR
+        $renderer = new \BaconQrCode\Renderer\ImageRenderer(
+            new \BaconQrCode\Renderer\RendererStyle\RendererStyle(180),
+            new \BaconQrCode\Renderer\Image\SvgImageBackEnd()
+        );
+        $writer = new \BaconQrCode\Writer($renderer);
+        $qrSvg = $writer->writeString($salida->VIN);
+        $qrBase64 = base64_encode($qrSvg);
+
+        $tipoChecklist = 'SALIDA';
+
+        // Traer el último checklist de salida del vehículo
+        $checklist = $salida->ultimoChecklistSalida()->first();
+
+        return view('ordenes.salidasimprimir', [
+            'tipo' => 'salida',
+            'salida' => $salida,
+            'qrBase64' => $qrBase64,
+            'checklist' => $checklist,
+            'tipoChecklist' => $tipoChecklist,
+        ]);
     }
 }
