@@ -107,7 +107,7 @@
             <div class="card-body">
                 <x-adminlte-textarea name="Observaciones" label="Observaciones">{{ old('Observaciones', $entrada->Observaciones) }}</x-adminlte-textarea>
                 <x-adminlte-button id="btn-guardar" label="Actualizar Entrada" theme="success" icon="fas fa-save" type="submit" />
-                <a href="{{ route('admin.entradas') }}" class="btn btn-secondary ml-2">Cancelar</a>
+                <a href="{{ route('entradas.index') }}" class="btn btn-secondary ml-2">Cancelar</a>
             </div>
         </div>
     </form>
