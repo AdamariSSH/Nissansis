@@ -1,5 +1,4 @@
-@extends('adminlte::page') // O 'layouts.app' si es tu layout personalizado de AdminLTE
-
+@extends('adminlte::page') 
 @section('title', 'Gestión de Usuarios')
 
 @section('content_header')
