@@ -10,13 +10,13 @@ class AlmacenController extends Controller
     public function index()
     {
         $almacenes = Almacen::all();      
-        return view('almacen', compact('almacenes'));
+        return view('almacen.index', compact('almacenes'));
     }
 
 
     public function create()
     {
-        return view('almacencreate'); // La vista para el formulario
+        return view('almacen.create'); // La vista para el formulario
     }
 
     public function store(Request $request)
@@ -49,7 +49,7 @@ class AlmacenController extends Controller
     public function edit($id)
     {
         $almacen = Almacen::findOrFail($id); // Busca el almacén por ID o lanza una excepción si no existe
-        return view('almacenedit', compact('almacen')); // Asegúrate de que el nombre de la vista sea correcto
+        return view('almacen.edit', compact('almacen')); // Asegúrate de que el nombre de la vista sea correcto
     }
   
 
