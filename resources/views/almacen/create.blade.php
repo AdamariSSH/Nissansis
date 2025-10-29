@@ -29,7 +29,7 @@
         </div>
 
         <button type="submit" class="btn btn-primary">Guardar</button>
-        <a href="{{ route('almacen') }}" class="btn btn-secondary">Cancelar</a>
+        <a href="{{ route('almacen.index') }}" class="btn btn-secondary">Cancelar</a>
 
     </form>
 @stop

@@ -73,7 +73,7 @@ class Entradas extends Controller
 
                 // 3. Redirección de éxito
                 return redirect()
-                    ->route('admin.vehiculos')
+                    ->route('vehiculos.index')
                     ->with('success', 'Entradas importadas correctamente.');
 
             } catch (ValidationException $e) {
@@ -86,7 +86,7 @@ class Entradas extends Controller
                 $row = $failures[0]->row();
 
                 return redirect()
-                    ->route('admin.vehiculos')
+                    ->route('vehiculos.index')
                     ->with('error', "Importación fallida con {$errorCount} errores. Primer error en Fila {$row}: {$firstError}");
 
             } catch (\Exception $e) {
