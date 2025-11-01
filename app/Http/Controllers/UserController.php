@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\User; // Asume que tienes un modelo User en App\Models\User
-use App\Models\Almacen; // Para obtener la lista de almacenes
+use App\Models\User; 
+use App\Models\Almacen; 
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 
@@ -48,15 +48,16 @@ class UserController extends Controller
             'almacen_id' => 'nullable|exists:almacen,Id_Almacen', // Valida que exista en la tabla almacen
         ]);
 
-        User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'role' => $request->role,
-            'almacen_id' => $request->almacen_id,
-        ]);
 
-        return redirect()->route('usuarios.index')->with('success', 'Usuario creado exitosamente.');
+        User::create([
+        'name' => $request->name,
+        'email' => $request->email,
+        'password' => Hash::make($request->password),
+        'role' => $request->role,
+        'almacen_id' => $request->almacen_id,
+    ])->assignRole($request->role); // <-- ¡Agrega esta línea!
+
+    return redirect()->route('usuarios.index')->with('success', 'Usuario creado exitosamente.');
     }
 
     /**
@@ -88,11 +89,17 @@ class UserController extends Controller
         $usuario->role = $request->role;
         $usuario->almacen_id = $request->almacen_id;
 
+        // ...
+
         if ($request->filled('password')) {
             $usuario->password = Hash::make($request->password);
         }
 
         $usuario->save();
+
+        // Elimina todos los roles actuales de Spatie y asigna el nuevo rol
+        $usuario->syncRoles([$request->role]); // o $usuario->removeRole(...) y luego $usuario->assignRole(...)
+        // ---
 
         return redirect()->route('usuarios.index')->with('success', 'Usuario actualizado exitosamente.');
     }

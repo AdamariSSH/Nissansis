@@ -19,7 +19,7 @@ class VehiculosController extends Controller
     $query = Vehiculo::with('almacen');
 
     if ($request->filled('vin')) {
-        $query->whereRaw('RIGHT(VIN, 10) LIKE ?', ['%' . $request->vin . '%']);
+    $query->where('VIN', 'LIKE', '%' . $request->vin . '%');
     }
 
     if ($request->filled('estado')) {
@@ -205,3 +205,5 @@ class VehiculosController extends Controller
         }
 
 }
+   
+

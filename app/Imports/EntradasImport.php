@@ -4,6 +4,7 @@ namespace App\Imports;
 use App\Models\Entrada;
 use App\Models\Vehiculo;
 use App\Models\Checklist;
+use App\Models\Almacen; 
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -41,33 +42,48 @@ class EntradasImport implements ToCollection, WithHeadingRow
             $tipoEntrada = $row['tipo'];
 
             // VALIDACIÓN DE EXISTENCIA CORREGIDA
-            // La validación anterior era incorrecta para Traspasos. Ahora solo chequeamos si existe 
-            // y lanzamos un error claro si un Traspaso no tiene vehículo en inventario.
             if (($tipoEntrada === 'Traspaso' || $tipoEntrada === 'Devolucion') && !Vehiculo::where('VIN', $vin)->exists()) {
                 throw new \Exception("El VIN {$vin} no existe en el inventario (tabla vehiculos). No se puede crear una entrada de tipo '{$tipoEntrada}'.");
             }
-            // Para Madrina, permitimos que pase, ya que lo crearemos temporalmente a continuación.
 
+            // ----------------------------------------------------
+            // 🚀 BÚSQUEDA Y VALIDACIÓN DE ALMACÉN (SOLUCIÓN DEFINITIVA)
+            // ----------------------------------------------------
+            
+            // 1. Obtener el nombre del almacén del Excel (robusto a mayúsculas/minúsculas del encabezado)
+            $nombreAlmacen = $row['Almacen_entrada'] ?? $row['almacen_entrada'] ?? null;
+            $almacenId = null;
 
-            // --- Validación de almacén ---
-            $almacenEntrada = $row['almacen_entrada'] ?? null;
-
-            if (!$isAdmin) {
-                // Si NO es admin, validamos que coincida con su almacén asignado
-                if (empty($almacenEntrada) || (int)$almacenEntrada !== (int)$userAlmacenId) {
-                    $vin = $row['vin'] ?? 'Desconocido';
-                    throw new \Exception(
-                        "El VIN {$vin} fue rechazado porque el almacén de entrada ({$almacenEntrada}) 
-                        no coincide con tu almacén asignado ({$userAlmacenId})."
-                    );
-                }
+            if (empty($nombreAlmacen)) {
+                // Si el campo de almacén está vacío en el Excel, usamos la ID del usuario.
+                $almacenId = $isAdmin ? 1 : $userAlmacenId; 
             } else {
-                // Si es admin y no viene definido el almacén, usamos uno por defecto
-                if (empty($almacenEntrada)) {
-                    $almacenEntrada = $userAlmacenId ?? 1;
+                // Limpiamos espacios y estandarizamos a MAYÚSCULAS para la búsqueda (como están en tu BD)
+                $cleanedName = strtoupper(trim($nombreAlmacen)); 
+
+                // 2. Buscar el almacén por nombre limpio
+                $almacen = Almacen::where('Nombre', $cleanedName)->first(); 
+
+                if ($almacen) {
+                    // MODIFICACIÓN CLAVE: Usamos la clave primaria explícita 'Id_Almacen'.
+                    $almacenId = $almacen->Id_Almacen; 
+                } else {
+                    // 3. Error si el nombre del almacén no se encuentra
+                    throw new \Exception("El almacén '{$nombreAlmacen}' (buscado como '{$cleanedName}') no se encontró en la tabla 'almacen'.");
                 }
             }
-            // --- Fin validación de almacén ---
+
+            // 4. Validación de pertenencia (si no es admin)
+            if (!$isAdmin && (int)$almacenId !== (int)$userAlmacenId) {
+                 $vin = $row['vin'] ?? 'Desconocido';
+                 throw new \Exception(
+                     "El VIN {$vin} fue rechazado. El ID de almacén ({$almacenId}) no coincide con tu almacén asignado ({$userAlmacenId})."
+                 );
+            }
+            // La variable $almacenId ahora tiene el ID NUMÉRICO correcto.
+            
+            // --- Fin Búsqueda y Validación ---
+
 
             // Normalizar valores booleanos
             $bool = fn($value) => filter_var($value, FILTER_VALIDATE_BOOLEAN);
@@ -86,7 +102,7 @@ class EntradasImport implements ToCollection, WithHeadingRow
                 throw new \Exception("El VIN {$row['vin']} fue rechazado porque la fecha de entrada ({$fechaEntrada}) no es válida. Solo se permiten fechas del día actual ({$hoy}).");
             }
 
-             if ($vin && strlen($vin) > 17) {
+            if ($vin && strlen($vin) > 17) {
                 // Lanzar una excepción específica para el error de longitud
                 throw new \Exception(
                     "El VIN {$vin} fue rechazado: Su longitud es de " . strlen($vin) . " caracteres. El VIN debe tener un máximo de 17 caracteres."
@@ -96,7 +112,7 @@ class EntradasImport implements ToCollection, WithHeadingRow
             $proximoMantenimiento = Carbon::parse($fechaEntrada)->addDays(30)->toDateString();
 
             // ----------------------------------------------------
-            //  LÓGICA CLAVE PARA EVITAR EL ERROR 
+            //  APLICACIÓN DEL ID NUMÉRICO
             // ----------------------------------------------------
             if ($tipoEntrada === 'Madrina' || $tipoEntrada === 'Otro') {
                 // Insertamos el vehículo en 'vehiculos' (tabla madre) con estatus temporal.
@@ -112,18 +128,18 @@ class EntradasImport implements ToCollection, WithHeadingRow
                     'Estado' => $row['estado'] ?? 'Pendiente de Revisión', 
                     'estatus' => 'En almacén', // Estatus logístico actualizado
                     'Coordinador_Logistica' => Auth::user()->name ?? 'Sistema',
-                    'Almacen_actual' => $almacenEntrada, // ESTE ES EL CAMPO CLAVE
+                    'Almacen_actual' => $almacenId, // <--- ¡USAMOS LA ID NUMÉRICA!
                     'tipo' => $tipoEntrada, // Almacenamos el tipo asociado
                 ]
-            );
+                );
                 
             }
             
-            // 2. Crear entrada (Ahora el VIN existe en vehiculos, por lo que pasa la FK)
+            // 2. Crear entrada
             $entrada = Entrada::create([
                 'VIN' => $vin,
                 'Kilometraje_entrada' => $row['kilometraje_entrada'] ?? 0,
-                'Almacen_entrada' => $almacenEntrada,
+                'Almacen_entrada' => $almacenId, // <--- ¡USAMOS LA ID NUMÉRICA!
                 'Fecha_entrada' => $fechaEntrada ?? now(),
                 'Tipo' => $tipoEntrada,
                 'Observaciones' => $row['observaciones'] ?? null,
