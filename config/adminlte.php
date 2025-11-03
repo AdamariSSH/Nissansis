@@ -315,11 +315,7 @@ return [
             'type' => 'sidebar-menu-search',
             'text' => 'search',
         ],
-        [
-            'text' => 'blog',
-            'url' => 'admin/blog',
-            'can' => 'manage-blog',
-        ],
+        
         [
             'text' => 'Avisos',
             'url' => 'admin/pages',
@@ -356,8 +352,6 @@ return [
                 ],
             ],
         ],
-
-
 
         [
             'text' => 'Vehiculos',

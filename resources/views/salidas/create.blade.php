@@ -213,7 +213,8 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        fetch(`/admin/salidas/vehiculo/${vin}`)
+        //fetch(`/admin/salidas/vehiculo/${vin}`)
+         fetch(`/salidas/vehiculo/${vin}`)
             .then(response => response.json())
             .then(data => {
                 if (data.error) {
