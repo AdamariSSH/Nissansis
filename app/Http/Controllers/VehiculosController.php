@@ -37,33 +37,6 @@ class VehiculosController extends Controller
     return view('vehiculos.index', compact('vehiculos', 'almacenes'));
 }
 
-
-    public function imprimir($No_orden)
-    {
-        $query = Vehiculo::with(['almacen', 'ultimaEntradatipo']);
-
-        if ($request->filled('vin')) {
-            $query->where('VIN', 'like', '%' . $request->vin . '%');
-        }
-
-        if ($request->filled('estado')) {
-            $query->where('Estado', $request->estado);
-        }
-
-        if (!Auth::user()->isAdmin()) {
-            $query->where('Almacen_actual', Auth::user()->almacen_id);
-        }
-
-        if ($request->filled('almacen_id') && Auth::user()->isAdmin()) {
-            $query->where('Almacen_actual', $request->almacen_id);
-        }
-
-        $vehiculos = $query->paginate(10)->appends($request->all());
-        $almacenes = Almacen::all();
-
-        return view('Vehiculos.index', compact('vehiculos', 'almacenes'));
-    }
-
     public function destroy($vin)
     {
         $vehiculo = Vehiculo::with('entradas.checklist')->findOrFail($vin);

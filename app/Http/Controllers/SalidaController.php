@@ -82,6 +82,7 @@ class SalidaController extends Controller
         return $checkEntrada ?? $checkSalida;
     }
 
+ 
     public function create(Request $request)
     {
         $almacenes = Almacen::all();
@@ -125,7 +126,9 @@ class SalidaController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    
+
+        public function store(Request $request)
     {
         $request->validate([
             'VIN' => 'required|exists:vehiculos,VIN',
@@ -139,15 +142,16 @@ class SalidaController extends Controller
             'Modelo' => 'required|string',
         ]);
 
-        DB::beginTransaction();
+               DB::beginTransaction();
 
         try {
             $vehiculo = Vehiculo::findOrFail($request->VIN);
 
-            // Bloquear si el vehículo está en tránsito
+                // Bloquear si el vehículo está en tránsito
             if ($vehiculo->estatus === 'En tránsito') {
                 throw new \Exception("El vehículo está en tránsito y no puede generar otra salida hasta que se registre la entrada en el almacén de destino.");
             }
+
 
             // Bloquear si ya tiene una salida sin entrada posterior
             $ultimaSalida = Salida::where('VIN', $request->VIN)
@@ -159,17 +163,16 @@ class SalidaController extends Controller
                     ->where('created_at', '>', $ultimaSalida->Fecha)
                     ->where('Almacen_entrada', $ultimaSalida->Almacen_entrada)
                     ->first();
-
                 if (!$entradaPosterior) {
                     throw new \Exception("El vehículo ya tuvo una salida ({$ultimaSalida->Tipo_salida}) y no puede generar otra hasta que se registre la entrada en el almacén destino.");
                 }
+               
             }
 
             // No permitir salidas si ya está vendido
             if ($vehiculo->Estado === 'Vendido') {
                 throw new \Exception("El vehículo ya fue vendido y no puede generar más salidas.");
             }
-
             // Obtener última entrada (para relación con salida)
             $ultimaEntrada = Entrada::where('VIN', $request->VIN)
                 ->latest('created_at')
@@ -190,7 +193,7 @@ class SalidaController extends Controller
                 'estatus' => 'pendiente',
             ]);
 
-            // Crear checklist de salida
+              // Crear checklist de salida
             $salida->checklistSalida()->create([
             'No_orden_salida' => $salida->No_orden_salida,
             'documentos_completos' => $request->input('documentos_completos', 0),
@@ -202,7 +205,9 @@ class SalidaController extends Controller
             'nfc_instalado' => $request->input('nfc_instalado', 0),
             'gps_instalado' => $request->input('gps_instalado', 0),
             'folder_viajero' => $request->input('folder_viajero', 0),
-            'observaciones' => $request->observaciones_checklist,
+            //'observaciones' => $request->observaciones_checklist,
+            'observaciones' => $request->observaciones,
+
             'recibido_por' => $request->recibido_por,
             'fecha_revision' => $request->fecha_revision,
             ]);
@@ -216,7 +221,7 @@ class SalidaController extends Controller
                 $vehiculo->estatus = 'vendido';
                 $vehiculo->save();
 
-            } elseif ($request->Tipo_salida === 'Traspaso' || $request->Tipo_salida === 'Devolucion') {
+                } elseif ($request->Tipo_salida === 'Traspaso' || $request->Tipo_salida === 'Devolucion') {
                 $vehiculo->estatus = 'En tránsito';
                 $vehiculo->save();
 
@@ -230,7 +235,7 @@ class SalidaController extends Controller
                     'Coordinador_Logistica' => auth()->user()->name,
                 ]);
 
-                // *** MODIFICACIÓN APLICADA AQUÍ ***
+               
                 $salida->estatus = 'confirmada'; // La salida del almacén de origen se confirma.
                 $salida->save();
             }
@@ -254,6 +259,7 @@ class SalidaController extends Controller
             return redirect()->back()->with('error', $e->getMessage());
         }
     }
+
 
 
     public function imprimirOrdenSalida($id)

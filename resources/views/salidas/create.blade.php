@@ -27,12 +27,14 @@
                         <x-adminlte-input id="buscarVin" name="VIN" label="VIN" maxlength="17" />
                         <div id="resultadosVin" class="list-group position-absolute w-100" style="z-index: 1000;"></div>
                     </div> --}}
+
                     <x-adminlte-input id="buscarVin" name="VIN" label="VIN" maxlength="17" />
-<div id="resultadosVin" class="list-group position-absolute w-100" style="z-index: 1000;"></div>
+                        <div id="resultadosVin" class="list-group position-absolute w-100" style="z-index: 1000;"></div>
 
                     <div class="col-md-4">
                         <x-adminlte-button id="btn-cargar" label="Cargar Datos" theme="primary" />
                     </div>
+
                 </div>
             </div>
         </div>
