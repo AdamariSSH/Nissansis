@@ -12,6 +12,7 @@ use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use Maatwebsite\Excel\Validators\ValidationException;
 
+
 use App\Models\Entrada;
 use App\Models\Almacen;
 use App\Models\Checklist;
@@ -20,36 +21,93 @@ use App\Models\Salida;
 use App\Imports\EntradasImport;
 use App\Models\ChecklistSalida;
 
+
 class Entradas extends Controller
 {
+    
     /* =========================================================
-        INDEX - LISTADO DE ENTRADAS
+        INDEX - LISTADO DE ENTRADAS (Última entrada única por vehículo)
     ========================================================= */
     public function index(Request $request)
     {
         $user = auth()->user();
-        $estatus = $request->get('estatus');
+        
+        // 1. Definir Ordenamiento
+        $sortBy = $request->get('sort_by', 'created_at');
+        $sortOrder = $request->get('sort_order', 'desc');
 
-        $query = Entrada::with('almacenEntrada')
-            ->orderBy('created_at', 'desc');
+        // --- CONSTRUCCIÓN DE LA SUBCONSULTA para obtener los IDs únicos (sin error 1055) ---
+        $latestOrderQuery = Entrada::query();
 
+        // Aplicar el filtro de Rol con lógica OR
         if ($user->role !== 'admin') {
-            // Usuario normal solo ve las entradas de su almacén
-            $query->where('Almacen_entrada', $user->almacen_id);
+            $userAlmacenId = $user->almacen_id;
+            
+            // El usuario ve: (Entradas creadas en su almacén) O (Vehículos que actualmente están en su almacén)
+            $latestOrderQuery->where(function ($query) use ($userAlmacenId) {
+                
+                // 1. Entradas creadas en su almacén (Su historial)
+                $query->where('Almacen_entrada', $userAlmacenId);
+                
+                // 2. O Entradas de vehículos que actualmente están en su almacén (Traspasados a él)
+                $query->orWhereHas('vehiculo', function ($q) use ($userAlmacenId) {
+                    // Es vital usar withoutGlobalScope para poder consultar el Vehículo
+                    $q->withoutGlobalScope('almacen_restriccion')
+                      ->where('Almacen_actual', $userAlmacenId);
+                });
+            });
         }
 
-        if ($estatus) {
-            $query->where('estatus', $estatus);
+        // --- Aplicamos los Filtros del Usuario (desde el formulario) a la subconsulta ---
+        
+        // Aplicamos los filtros condicionalmente a la consulta base
+        if ($request->filled('fecha')) {
+            $latestOrderQuery->whereDate('created_at', $request->input('fecha'));
+        }
+        if ($request->filled('almacen_entrada_id')) {
+            $latestOrderQuery->where('Almacen_entrada', $request->input('almacen_entrada_id'));
+        }
+        if ($request->filled('estatus')) {
+            $latestOrderQuery->where('estatus', $request->input('estatus'));
+        }
+        
+        // Aplicamos el filtro de estado de vehículo (whereHas) si existe.
+        if ($request->filled('estado_vehiculo')) {
+            $latestOrderQuery->whereHas('vehiculo', function ($q) use ($request) {
+                // Mantenemos withoutGlobalScope aquí también
+                $q->withoutGlobalScope('almacen_restriccion')
+                  ->where('Estado', $request->input('estado_vehiculo'));
+            });
         }
 
-        $entradas = $query->paginate(10);
+        // Seleccionamos el ID de la entrada más reciente por cada VIN.
+        $latestOrderIds = $latestOrderQuery
+            ->selectRaw('MAX(No_orden)')
+            ->groupBy('VIN');
+            
+        // --- CONSTRUCCIÓN DE LA CONSULTA PRINCIPAL ---
+        $query = Entrada::query();
+        
+        // Filtramos la consulta principal para incluir SÓLO los IDs de la última entrada de cada VIN.
+        $query->whereIn('No_orden', $latestOrderIds);
+
+        // Cargamos las relaciones con la corrección del Global Scope
+        $query->with([
+            'almacenSalida',
+            'almacenEntrada',
+            'vehiculo' => function ($q) {
+                $q->withoutGlobalScope('almacen_restriccion');
+            }
+        ]);
+        
+        // Aplicar Ordenamiento
+        $query->orderBy($sortBy, $sortOrder);
+
+        // Ejecutar la consulta para OBTENER TODOS los registros ÚNICOS (sin paginación)
+        $entradas = $query->get();
 
         return view('entradas.index', compact('entradas'));
     }
-
-        
-
-
 
     /* =========================================================
         FORMULARIO DE IMPORTACIÓN
@@ -59,45 +117,42 @@ class Entradas extends Controller
         return view('entradas.import');
     }
 
-
     public function importar(Request $request)
-        {
-            // 1. Validación de archivo (correcta)
-            $request->validate([
-                'archivo' => 'required|mimes:xlsx,csv|max:2048',
-            ]);
+    {
+        // 1. Validación de archivo (correcta)
+        $request->validate([
+            'archivo' => 'required|mimes:xlsx,csv|max:2048',
+        ]);
 
-            try {
-                // 2. Ejecutar la importación
-                Excel::import(new EntradasImport, $request->file('archivo'));
+        try {
+            // 2. Ejecutar la importación
+            Excel::import(new EntradasImport, $request->file('archivo'));
 
-                // 3. Redirección de éxito
-                return redirect()
-                    ->route('vehiculos.index')
-                    ->with('success', 'Entradas importadas correctamente.');
+            // 3. Redirección de éxito
+            return redirect()
+                ->route('vehiculos.index')
+                ->with('success', 'Entradas importadas correctamente.');
 
-            } catch (ValidationException $e) {
-                // 4. Captura ERRORES de VALIDACIÓN de Maatwebsite/Excel (si se usa ToModel)
-                $failures = $e->failures();
-                $errorCount = count($failures);
-                
-                // Muestra el primer error para no abrumar al usuario
-                $firstError = $failures[0]->errors()[0] ?? 'Error desconocido en la importación.';
-                $row = $failures[0]->row();
+        } catch (ValidationException $e) {
+            // 4. Captura ERRORES de VALIDACIÓN de Maatwebsite/Excel
+            $failures = $e->failures();
+            $errorCount = count($failures);
+            
+            // Muestra el primer error para no abrumar al usuario
+            $firstError = $failures[0]->errors()[0] ?? 'Error desconocido en la importación.';
+            $row = $failures[0]->row();
 
-                return redirect()
-                    ->route('vehiculos.index')
-                    ->with('error', "Importación fallida con {$errorCount} errores. Primer error en Fila {$row}: {$firstError}");
+            return redirect()
+                ->route('vehiculos.index')
+                ->with('error', "Importación fallida con {$errorCount} errores. Primer error en Fila {$row}: {$firstError}");
 
-            } catch (\Exception $e) {
-                // 5.  Captura TUS excepciones personalizadas (VIN, almacén, fecha, etc.)
-                
-                // El mensaje $e->getMessage() es el que lanzaste en EntradasImport.php
-                return redirect()
-                    ->route('vehiculos.index')
-                    ->with('error', 'Importación cancelada: ' . $e->getMessage());
-            }
+        } catch (\Exception $e) {
+            // 5. Captura TUS excepciones personalizadas
+            return redirect()
+                ->route('vehiculos.index')
+                ->with('error', 'Importación cancelada: ' . $e->getMessage());
         }
+    }
 
     /* =========================================================
         CREATE - FORMULARIO DE NUEVA ENTRADA
@@ -112,7 +167,6 @@ class Entradas extends Controller
 
         return view('entradas.create', compact('almacenes'));
     }
-
 
     /* =========================================================
         STORE - REGISTRA ENTRADA Y CHECKLIST INICIAL
@@ -133,19 +187,23 @@ class Entradas extends Controller
             'Modelo' => 'required|string|max:50',
             'Kilometraje_entrada' => 'nullable|numeric|min:0',
             'Tipo' => 'required|in:Madrina,Traspaso',
-            'documentos_completos' => 'nullable|boolean',
-            'accesorios_completos' => 'nullable|boolean',
+            
+            // Checkboxes y select de Checklist
+            'documentos_completos' => 'nullable|string', 
+            'accesorios_completos' => 'nullable|string',
             'estado_exterior' => 'nullable|in:Excelente,Bueno,Regular,Malo',
             'estado_interior' => 'nullable|in:Excelente,Bueno,Regular,Malo',
-            'pdi_realizada' => 'nullable|boolean',
-            'seguro_vigente' => 'nullable|boolean',
-            'nfc_instalado' => 'nullable|boolean',
-            'gps_instalado' => 'nullable|boolean',
-            'folder_viajero' => 'nullable|boolean',
+            'pdi_realizada' => 'nullable|string',
+            'seguro_vigente' => 'nullable|string',
+            'nfc_instalado' => 'nullable|string',
+            'gps_instalado' => 'nullable|string',
+            'folder_viajero' => 'nullable|string',
+            
             'recibido_por' => 'nullable|string|max:50',
             'fecha_revision' => 'nullable|date_format:Y-m-d\TH:i',
-            'observaciones_checklist' => 'nullable|string',
-            'Observaciones' => 'nullable|string',
+            'observaciones_checklist' => 'nullable|string', // Nombre usado en Blade
+            'Observaciones' => 'nullable|string', // Nombre usado para observaciones generales de la entrada
+            'Estado' => 'required|string|max:50', // Estado del vehículo
         ]);
 
         $proximoMantenimiento = Carbon::now()->addDays(30)->toDateString();
@@ -153,7 +211,7 @@ class Entradas extends Controller
 
         DB::beginTransaction();
         try {
-            //  Crear o actualizar vehículo
+            // Crear o actualizar vehículo
             $vehiculo = Vehiculo::updateOrCreate(
                 ['VIN' => $validated['VIN']],
                 [
@@ -164,14 +222,13 @@ class Entradas extends Controller
                     'Coordinador_Logistica' => $validated['Coordinador_Logistica'],
                     'Proximo_mantenimiento' => $proximoMantenimiento,
                     'Almacen_actual' => $almacenId,
-                    'estatus' => 'pendiente salida',
+                    'estatus' => $validated['Tipo'] === 'Madrina' ? 'En almacén' : 'En tránsito',
+                    //'estatus' => 'En almacén', // Al crear o actualizar, asumimos que está en el almacén de entrada
+                    'Estado' => $validated['Estado'], // Usamos el estado del checklist
                 ]
             );
 
-            $vehiculo->Estado = $request->Estado ?? 'Mantenimiento';
-            $vehiculo->save();
-
-            //  Crear entrada
+            // Crear entrada
             $entrada = Entrada::create([
                 'VIN' => $vehiculo->VIN,
                 'Kilometraje_entrada' => $validated['Kilometraje_entrada'],
@@ -182,28 +239,29 @@ class Entradas extends Controller
                 'estatus' => 'pendiente',
             ]);
 
-            //  Crear checklist inicial
+            // Crear checklist inicial
             Checklist::create([
                 'No_orden_entrada' => $entrada->No_orden,
                 'tipo_checklist' => $validated['Tipo'],
-                'documentos_completos' => $request->has('documentos_completos'),
-                'accesorios_completos' => $request->has('accesorios_completos'),
+                // 🟢 CORRECCIÓN: Usar $request->has() para los checkboxes.
+                'documentos_completos' => $request->has('documentos_completos') ? 1 : 0, 
+                'accesorios_completos' => $request->has('accesorios_completos') ? 1 : 0,
                 'estado_exterior' => $validated['estado_exterior'] ?? null,
                 'estado_interior' => $validated['estado_interior'] ?? null,
-                'pdi_realizada' => $request->has('pdi_realizada'),
-                'seguro_vigente' => $request->has('seguro_vigente'),
-                'nfc_instalado' => $request->has('nfc_instalado'),
-                'gps_instalado' => $request->has('gps_instalado'),
-                'folder_viajero' => $request->has('folder_viajero'),
+                'pdi_realizada' => $request->has('pdi_realizada') ? 1 : 0,
+                'seguro_vigente' => $request->has('seguro_vigente') ? 1 : 0,
+                'nfc_instalado' => $request->has('nfc_instalado') ? 1 : 0,
+                'gps_instalado' => $request->has('gps_instalado') ? 1 : 0,
+                'folder_viajero' => $request->has('folder_viajero') ? 1 : 0,
                 'recibido_por' => $validated['recibido_por'] ?? null,
                 'fecha_revision' => $validated['fecha_revision'] ?? null,
-                'observaciones' => $validated['observaciones_checklist'] ?? null,
+                'observaciones' => $validated['observaciones_checklist'] ?? null, // Usar 'observaciones' como nombre de columna
             ]);
 
             DB::commit();
             return redirect()
                 ->route('entradas.index')
-                ->with('success', 'Entrada y Checklist iniciales registrados. Vehículo en Mantenimiento pendiente de revisión.');
+                ->with('success', 'Entrada y Checklist iniciales registrados. Vehículo en Almacén pendiente de revisión.');
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -211,203 +269,236 @@ class Entradas extends Controller
         }
     }
 
+    /* =========================================================
+        CONFIRMAR Y RECHAZAR ENTRADAS
+    ========================================================= */
 
-            /* =========================================================
-            CONFIRMAR Y RECHAZAR ENTRADAS
-        ========================================================= */
-        public function confirmar($id)
-        {
-            $entrada = Entrada::findOrFail($id);
-            // NOTA: Este método 'confirmar' también podría fallar si es Madrina. 
-            // Si usas el 'update' para confirmar, te recomiendo deshabilitar/eliminar esta ruta.
-            $vehiculo = Vehiculo::findOrFail($entrada->VIN); 
+    public function confirmar($id)
+{
+    DB::beginTransaction();
 
-            $entrada->estatus = 'confirmada';
-            $entrada->save();
+    try {
+        $entrada = Entrada::findOrFail($id);
+        
+        // Usamos where('VIN', ...) y firstOrFail() porque el VIN no es la PK de la tabla,
+        // Y usamos withoutGlobalScope para ignorar la restricción del almacén.
+        $vehiculo = Vehiculo::withoutGlobalScope('almacen_restriccion')
+            ->where('VIN', $entrada->VIN) 
+            ->firstOrFail(); 
 
-            $salida = Salida::where('VIN', $entrada->VIN)
-                ->where('estatus', 'pendiente')
-                ->first();
+        // 1. Actualizar Entrada
+        $entrada->estatus = 'confirmada';
+        $entrada->save();
 
-            if ($salida) {
-                $salida->estatus = 'confirmada';
-                $salida->save();
-            }
+        // 2. Cerrar Salida (Busca la orden de salida que puso el vehículo 'En transito')
+        $salida = Salida::where('VIN', $entrada->VIN)
+            ->where('estatus', 'En transito') 
+            ->where('Almacen_entrada', $entrada->Almacen_entrada) 
+            ->first();
 
-            $vehiculo->Almacen_actual = $entrada->Almacen_entrada;
-            $vehiculo->estatus = 'En almacén';
-            $vehiculo->save();
-
-            return redirect()
-                ->route('entradas.index')
-                ->with('success', 'Entrada confirmada y vehículo en almacén destino.');
+        if ($salida) {
+            $salida->estatus = 'finalizada';
+            $salida->save();
         }
 
+        // 3. Actualización de Inventario (Mover el vehículo al almacén de destino)
+        $vehiculo->Almacen_actual = $entrada->Almacen_entrada;
+        $vehiculo->estatus = 'En almacén';
+        $vehiculo->save();
 
-        public function rechazar($id)
-        {
-            $entrada = Entrada::findOrFail($id);
-            $vehiculo = Vehiculo::findOrFail($entrada->VIN);
+        DB::commit();
 
-            $entrada->estatus = 'rechazada';
-            $entrada->save();
+        return redirect()
+            ->route('entradas.index')
+            ->with('success', 'Entrada confirmada y vehículo en almacén destino.');
 
-            $salida = Salida::where('VIN', $entrada->VIN)
-                ->where('estatus', 'pendiente')
-                ->first();
+    } catch (\Exception $e) {
+        DB::rollBack();
+        
+        // El try/catch evita la falla silenciosa y muestra el error exacto si lo hay
+        return redirect()->back()->with('error', 'Error al confirmar la entrada: ' . $e->getMessage()); 
+    }
+}
 
-            if ($salida) {
-                $salida->estatus = 'rechazada';
-                $salida->save();
-            }
 
-            $vehiculo->Almacen_actual = $entrada->Almacen_salida;
-            $vehiculo->estatus = 'En almacén';
-            $vehiculo->save();
+    public function rechazar($id)
+    {
+        $entrada = Entrada::findOrFail($id);
+        $vehiculo = Vehiculo::findOrFail($entrada->VIN);
 
-            return redirect()
-                ->route('entradas.index')
-                ->with('success', 'Entrada rechazada y vehículo regresó al almacén origen.');
+        $entrada->estatus = 'rechazada';
+        $entrada->save();
+
+        //MEJORA: Buscamos la Salida que iba a este destino para cancelarla/rechazarla
+        $salida = Salida::where('VIN', $entrada->VIN)
+            ->where('estatus', 'En transito')
+            ->where('Almacen_entrada', $entrada->Almacen_entrada) 
+            ->first();
+
+        if ($salida) {
+            $salida->estatus = 'rechazada';
+            $salida->save();
         }
 
+        $vehiculo->Almacen_actual = $entrada->Almacen_salida;
+        $vehiculo->estatus = 'En almacén';
+        $vehiculo->save();
 
-        /* =========================================================
-            EDITAR Y ACTUALIZAR ENTRADAS
-        ========================================================= */
-        public function edit($id)
-        {
-            $entrada = Entrada::with(['checklist', 'vehiculo'])->findOrFail($id);
+        return redirect()
+            ->route('entradas.index')
+            ->with('success', 'Entrada rechazada y vehículo regresó al almacén origen.');
+    }
 
-                if ($entrada->estatus === 'confirmada') {
-            return redirect()->route('entradas.index')->with('error', ' Esta orden de entrada ya ha sido confirmada y es inmutable.');
-            }
-            $almacenes = Almacen::all();
-            $checklist = $entrada->checklist;
-            $vehiculos = Vehiculo::all();
-
-            return view('entradas.edit', compact('entrada', 'almacenes', 'checklist', 'vehiculos'));
+    /* =========================================================
+        EDITAR Y ACTUALIZAR ENTRADAS
+    ========================================================= */
+    public function edit($id)
+{
+    // 1. CARGA DE ENTRADA CORREGIDA: Usar una función anónima para ignorar el Global Scope del modelo Vehiculo
+    $entrada = Entrada::with([
+        'checklist', 
+        'vehiculo' => function($query) {
+            // Esto le dice a Laravel: Carga la relación Vehiculo, ignorando la restricción de almacén.
+            // Si el nombre de tu scope es diferente, ajústalo. Si no tiene nombre, usa withoutGlobalScopes().
+            $query->withoutGlobalScope('almacen_restriccion'); 
         }
+    ])->findOrFail($id);
 
-        public function update(Request $request, $id)
-        {
-            $entrada = Entrada::findOrFail($id);
+    // 2. Bloqueo por Estatus (se mantiene)
+    if ($entrada->estatus === 'confirmada') {
+        return redirect()->route('entradas.index')->with('error', ' Esta orden de entrada ya ha sido confirmada y es inmutable.');
+    }
 
-            $data = $request->validate([
-                'Motor' => 'required|max:17',
-                'Caracteristicas' => 'required|string',
-                'Color' => 'required|string',
-                'Modelo' => 'required|string',
-                'Kilometraje_entrada' => 'nullable|integer',
-                'Almacen_entrada' => 'required|exists:almacen,Id_Almacen',
-                'Tipo' => 'required|string',
-                'Estado' => 'required|string',
-                'documentos_completos' => 'nullable|boolean',
-                'accesorios_completos' => 'nullable|boolean',
-                'estado_exterior' => 'nullable|string',
-                'estado_interior' => 'nullable|string',
-                'pdi_realizada' => 'nullable|boolean',
-                'seguro_vigente' => 'nullable|boolean',
-                'nfc_instalado' => 'nullable|boolean',
-                'gps_instalado' => 'nullable|boolean',
-                'folder_viajero' => 'nullable|boolean',
-                'observaciones' => 'nullable|string',
-                'recibido_por' => 'nullable|string|max:255',
-                'fecha_revision' => 'nullable|date_format:Y-m-d\TH:i',
+    // 3. Eliminamos el código de 'crear vehículo si no existe'.
+    // Si el vehículo existe en la tabla, ahora $entrada->vehiculo NO será null y los datos se cargarán.
+    // Si la relación sigue siendo null (muy raro en un traspaso), hay un problema de VIN o de BD.
+    
+    // 4. Se mantiene la carga de datos para la vista
+    $almacenes = Almacen::all();
+    $checklist = $entrada->checklist; 
+
+    return view('entradas.edit', compact('entrada', 'almacenes', 'checklist'));
+}
+
+    public function update(Request $request, $id)
+    {
+        $entrada = Entrada::findOrFail($id);
+
+        $data = $request->validate([
+            'Motor' => 'required|max:17',
+            'Caracteristicas' => 'required|string',
+            'Color' => 'required|string',
+            'Modelo' => 'required|string',
+            'Kilometraje_entrada' => 'nullable|integer',
+            'Almacen_entrada' => 'required|exists:almacen,Id_Almacen',
+            'Tipo' => 'required|string',
+            'Estado' => 'required|string',
+            // Checklist: Validar como string, luego convertir a booleano/entero
+            'documentos_completos' => 'nullable|string', 
+            'accesorios_completos' => 'nullable|string',
+            'estado_exterior' => 'nullable|string',
+            'estado_interior' => 'nullable|string',
+            'pdi_realizada' => 'nullable|string',
+            'seguro_vigente' => 'nullable|string',
+            'nfc_instalado' => 'nullable|string',
+            'gps_instalado' => 'nullable|string',
+            'folder_viajero' => 'nullable|string',
+            'observaciones_checklist' => 'nullable|string', // Nombre usado en Blade
+            'recibido_por' => 'nullable|string|max:255',
+            'fecha_revision' => 'nullable|date_format:Y-m-d\TH:i',
+            'Observaciones' => 'nullable|string', // Observaciones generales de la Entrada
+        ]);
+
+        DB::beginTransaction();
+        try {
+            // 1. Actualizar SOLO los campos de la ORDEN DE ENTRADA
+            $entrada->update([
+                'Kilometraje_entrada' => $data['Kilometraje_entrada'],
+                'Almacen_entrada' => $data['Almacen_entrada'],
+                'Tipo' => $data['Tipo'],
+                'Observaciones' => $data['Observaciones'] ?? null,
+                //'estatus' => $entrada->Tipo === 'Madrina' ? 'En almacén' : 'En tránsito',
+                //'estatus' => 'pendiente',
             ]);
 
-            DB::beginTransaction();
-            try {
-                // 1. Actualizar SOLO los datos de la ORDEN DE ENTRADA
-                $entrada->update($data);
+            // 2. Actualizar/Crear Checklist
+            $entrada->checklist()->updateOrCreate(
+                ['No_orden_entrada' => $entrada->No_orden],
+                [
+                    //CORRECCIÓN: Usar $request->has() para los checkboxes.
+                    'documentos_completos' => $request->has('documentos_completos') ? 1 : 0, 
+                    'accesorios_completos' => $request->has('accesorios_completos') ? 1 : 0,
+                    'estado_exterior' => $data['estado_exterior'] ?? null,
+                    'estado_interior' => $data['estado_interior'] ?? null,
+                    'pdi_realizada' => $request->has('pdi_realizada') ? 1 : 0,
+                    'seguro_vigente' => $request->has('seguro_vigente') ? 1 : 0,
+                    'nfc_instalado' => $request->has('nfc_instalado') ? 1 : 0,
+                    'gps_instalado' => $request->has('gps_instalado') ? 1 : 0,
+                    'folder_viajero' => $request->has('folder_viajero') ? 1 : 0,
+                    'observaciones' => $data['observaciones_checklist'] ?? null, 
+                    'recibido_por' => $data['recibido_por'] ?? null,
+                    'fecha_revision' => $data['fecha_revision'] ?? null,
+                    'tipo_checklist' => $data['Tipo'],
+                ]
+            );
 
-                // 2. Actualizar/Crear Checklist (Esto ocurre siempre que se guarda la edición)
-                $entrada->checklist()->updateOrCreate(
-                    ['No_orden_entrada' => $entrada->No_orden],
-                    $request->only([
-                        'documentos_completos', 'accesorios_completos', 'estado_exterior', 'estado_interior',
-                        'pdi_realizada', 'seguro_vigente', 'nfc_instalado', 'gps_instalado',
-                        'folder_viajero', 'observaciones', 'recibido_por', 'fecha_revision',
-                    ])
-                );
+            // 3. Actualizar/Crear el Vehículo en el Inventario con los datos del formulario
+            $vehiculoInventarioData = [
+                'Motor' => $request->input('Motor'),
+                'Caracteristicas' => $request->input('Caracteristicas'),
+                'Color' => $request->input('Color'),
+                'Modelo' => $request->input('Modelo'),
+                'Estado' => $request->input('Estado'), // Estado del Checklist
+                //'Almacen_actual' => $entrada->Almacen_entrada, 
+                //'estatus' => $entrada->Tipo === 'Madrina' ? 'En almacén' : 'En tránsito', 
+            ];
 
-                // 3. LÓGICA DE CONFIRMACIÓN: Mueve el vehículo al inventario si la orden estaba pendiente
-                if ($entrada->estatus === 'pendiente') {
-
-                    // 3.1. Preparar los datos del vehículo para el INVENTARIO (tabla vehiculos)
-                    $vehiculoInventarioData = [
-                        'Motor' => $request->input('Motor'),
-                        'Caracteristicas' => $request->input('Caracteristicas'),
-                        'Color' => $request->input('Color'),
-                        'Modelo' => $request->input('Modelo'),
-                        // El estado viene del checklist ('disponible' o 'mantenimiento')
-                        'Estado' => $request->input('Estado'), 
-                        'estatus' => 'En almacén',
-                        'Almacen_actual' => $entrada->Almacen_entrada, // Almacén de destino
-                        'tipo' => $entrada->Tipo,
-                    ];
-
-                    // 3.2. Flujo Clave: Crear o Actualizar el Vehículo en el Inventario
-                    if ($entrada->Tipo === 'Madrina' || $entrada->Tipo === 'Otro') {
-                        // Si es MADRINA, es un vehículo NUEVO: INSERTAR o actualizar si ya existe (seguridad)
-                        Vehiculo::updateOrCreate(
-                            ['VIN' => $entrada->VIN],
-                            $vehiculoInventarioData
-                        );
-                    } else {
-                        // Si es TRASPASO/DEVOLUCIÓN (ya debe existir): SÓLO ACTUALIZAMOS
-                        $vehiculo = Vehiculo::findOrFail($entrada->VIN);
-                        $vehiculo->update($vehiculoInventarioData);
-                    }
-
-                    // 3.3. Marcar la entrada como confirmada
-                    $entrada->estatus = 'confirmada';
-                    $entrada->save();
-
-                    // 3.4. Confirmar Salida Pendiente (si es Traspaso)
-                    if ($entrada->Tipo === 'Traspaso') {
-                        $salidaPendiente = Salida::where('VIN', $entrada->VIN)
-                            ->where('estatus', 'pendiente')
-                            ->first();
-                        if ($salidaPendiente) {
-                            $salidaPendiente->estatus = 'confirmada';
-                            $salidaPendiente->save();
-                        }
-                    }
-                }
-
-                DB::commit();
-                return redirect()
-                    ->route('entradas.index') // Redirigir a la lista de entradas
-                    ->with('success', 'Entrada y Checklist finalizados correctamente. Vehículo en inventario activo.');
-
-            } catch (\Exception $e) {
-                DB::rollBack();
-                return redirect()->back()->with('error', 'Error al finalizar el Checklist: ' . $e->getMessage());
-            }
+            if ($entrada->Tipo === 'Madrina') {
+             // Si es Madrina, se registra en el almacén de entrada como 'En almacén'
+            $vehiculoInventarioData['Almacen_actual'] = $entrada->Almacen_entrada;
+            $vehiculoInventarioData['estatus'] = 'En almacén';
         }
+        // Si es Traspaso, $vehiculoInventarioData NO contiene 'Almacen_actual' ni 'estatus', 
+        // manteniendo los valores previos ('En tránsito' en el almacén de salida/tránsito).
+
+            Vehiculo::withoutGlobalScope('almacen_restriccion')->updateOrCreate(
+                ['VIN' => $entrada->VIN],
+                $vehiculoInventarioData
+            );
+            
+            // 4. Se confirma la transacción
+            DB::commit();
+            
+            return redirect()
+                ->route('entradas.index') 
+                ->with('success', 'Entrada y datos del Vehículo actualizados correctamente. Recuerda presionar el botón de Confirmar para cerrar el ciclo si es un Traspaso.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Error al actualizar la entrada: ' . $e->getMessage());
+        }
+    }
 
     /* =========================================================
         ELIMINAR ENTRADA Y CHECKLIST
     ========================================================= */
     public function destroy($id)
-        {
-            $entrada = Entrada::findOrFail($id);
+    {
+        $entrada = Entrada::findOrFail($id);
 
-            //  BLOQUEA LA ELIMINACIÓN SI EL TRASPASO CONCLUYÓ
-            if ($entrada->estatus === 'confirmada') {
-                return redirect()->back()->with('error', ' No puedes eliminar una Orden de Entrada que ya ha sido confirmada.');
-            }
-
-            // ... Continúa con la eliminación si no está confirmada ...
-            if ($entrada->checklist) {
-                $entrada->checklist->delete();
-            }
-
-            $entrada->delete();
-
-            return redirect()->back()->with('success', 'Entrada eliminada correctamente');
+        // BLOQUEA LA ELIMINACIÓN SI EL TRASPASO CONCLUYÓ
+        if ($entrada->estatus === 'confirmada') {
+            return redirect()->back()->with('error', ' No puedes eliminar una Orden de Entrada que ya ha sido confirmada.');
         }
 
+        if ($entrada->checklist) {
+            $entrada->checklist->delete();
+        }
+
+        $entrada->delete();
+
+        return redirect()->back()->with('success', 'Entrada eliminada correctamente');
+    }
 
     /* =========================================================
         IMPRIMIR ORDEN DE ENTRADA
@@ -424,7 +515,8 @@ class Entradas extends Controller
         // 🔹 Si tiene almacén de salida, es un traspaso
         if ($entrada->Almacen_salida !== null) {
             $salida = Salida::where('VIN', $entrada->VIN)
-                ->whereIn('estatus', ['confirmada', 'pendiente'])
+                // MEJORA: Buscar la salida que esté en tránsito o confirmada, para que coincida con el proceso.
+                ->whereIn('estatus', ['confirmada', 'finalizada', 'En transito']) 
                 ->orderByDesc('created_at')
                 ->first();
 

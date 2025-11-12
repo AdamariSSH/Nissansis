@@ -62,7 +62,46 @@
                         <x-adminlte-input name="Kilometraje_salida" label="Kilometraje" type="number" value="0" />
                     </div>
                     
+
+                    @php
+                        // Obtener el usuario actual y verificar su rol
+                        $user = auth()->user();
+                        $isAdmin = $user->role === 'admin';
+                        // Usar optional() para evitar el error si la relación $user->almacen es nula
+                        $nombreAlmacen = optional($user->almacen)->Nombre ?? 'NO ASIGNADO (Admin)';
+                    @endphp
+
                     @isset($almacenes)
+                        
+                    {{-- CAMPO ALMACÉN DE SALIDA --}}
+                    <div class="col-md-4">
+                        @if ($isAdmin)
+                            {{-- 1. Opción para el ADMIN: Debe seleccionar de qué almacén saldrá el vehículo --}}
+                            <x-adminlte-select name="Almacen_salida" label="Almacén Salida (Selección)" required>
+                                <option value="" disabled selected>Seleccione el Almacén de Salida...</option>
+                                @foreach ($almacenes as $almacen)
+                                    <option value="{{ $almacen->Id_Almacen }}">{{ $almacen->Nombre }}</option>
+                                @endforeach
+                            </x-adminlte-select>
+                        @else
+                            {{-- 2. Opción para Usuarios de Almacén: Se fija a su almacén asignado --}}
+                            <x-adminlte-input name="Almacen_salida_texto" label="Almacén Salida"
+                                value="{{ $nombreAlmacen }}" disabled />
+                            <input type="hidden" name="Almacen_salida" value="{{ $user->almacen_id }}">
+                        @endif
+                    </div>
+
+                    {{-- CAMPO ALMACÉN DE ENTRADA (DESTINO) --}}
+                    <div class="col-md-4">
+                        <x-adminlte-select name="Almacen_entrada" label="Almacén Entrada (Destino)" required>
+                            <option value="" disabled selected>Seleccione el Almacén de Entrada...</option>
+                            @foreach ($almacenes as $almacen)
+                                <option value="{{ $almacen->Id_Almacen }}">{{ $almacen->Nombre }}</option>
+                            @endforeach
+                        </x-adminlte-select>
+                    </div>
+                @endisset
+                    {{-- @isset($almacenes)
                         
                         <div class="col-md-4">
                             <x-adminlte-input name="Almacen_salida_texto" label="Almacén Salida"
@@ -78,7 +117,7 @@
                                 @endforeach
                             </x-adminlte-select>
                         </div>
-                        @endisset
+                        @endisset --}}
 
                     
                     <div class="col-md-4">
@@ -325,224 +364,3 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 @stop
 
-
-{{-- 
-@section('js')
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const btnCargar = document.getElementById('btn-cargar');
-    const checklistContainer = document.getElementById("checklist-container");
-
-    function renderChecklist(c) {
-        return `
-            <input type="hidden" name="documentos_completos" value="0">
-            <div class="form-check mb-2">
-                <input class="form-check-input" type="checkbox" name="documentos_completos" value="1" ${c.documentos_completos ? 'checked' : ''}>
-                <label class="form-check-label">Documentos Completos</label>
-            </div>
-
-            <input type="hidden" name="accesorios_completos" value="0">
-            <div class="form-check mb-2">
-                <input class="form-check-input" type="checkbox" name="accesorios_completos" value="1" ${c.accesorios_completos ? 'checked' : ''}>
-                <label class="form-check-label">Accesorios Completos</label>
-            </div>
-
-            <div class="form-group">
-                <label>Estado Exterior</label>
-                <select class="form-control" name="estado_exterior">
-                    <option ${c.estado_exterior === 'Excelente' ? 'selected' : ''}>Excelente</option>
-                    <option ${c.estado_exterior === 'Bueno' ? 'selected' : ''}>Bueno</option>
-                    <option ${c.estado_exterior === 'Regular' ? 'selected' : ''}>Regular</option>
-                    <option ${c.estado_exterior === 'Malo' ? 'selected' : ''}>Malo</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label>Estado Interior</label>
-                <select class="form-control" name="estado_interior">
-                    <option ${c.estado_interior === 'Excelente' ? 'selected' : ''}>Excelente</option>
-                    <option ${c.estado_interior === 'Bueno' ? 'selected' : ''}>Bueno</option>
-                    <option ${c.estado_interior === 'Regular' ? 'selected' : ''}>Regular</option>
-                    <option ${c.estado_interior === 'Malo' ? 'selected' : ''}>Malo</option>
-                </select>
-            </div>
-
-            <input type="hidden" name="pdi_realizada" value="0">
-            <div class="form-check mb-2">
-                <input class="form-check-input" type="checkbox" name="pdi_realizada" value="1" ${c.pdi_realizada ? 'checked' : ''}>
-                <label class="form-check-label">PDI Realizada</label>
-            </div>
-
-            <input type="hidden" name="seguro_vigente" value="0">
-            <div class="form-check mb-2">
-                <input class="form-check-input" type="checkbox" name="seguro_vigente" value="1" ${c.seguro_vigente ? 'checked' : ''}>
-                <label class="form-check-label">Seguro Vigente</label>
-            </div>
-
-            <input type="hidden" name="nfc_instalado" value="0">
-            <div class="form-check mb-2">
-                <input class="form-check-input" type="checkbox" name="nfc_instalado" value="1" ${c.nfc_instalado ? 'checked' : ''}>
-                <label class="form-check-label">NFC Instalado</label>
-            </div>
-
-            <input type="hidden" name="gps_instalado" value="0">
-            <div class="form-check mb-2">
-                <input class="form-check-input" type="checkbox" name="gps_instalado" value="1" ${c.gps_instalado ? 'checked' : ''}>
-                <label class="form-check-label">GPS Instalado</label>
-            </div>
-
-            <input type="hidden" name="folder_viajero" value="0">
-            <div class="form-check mb-2">
-                <input class="form-check-input" type="checkbox" name="folder_viajero" value="1" ${c.folder_viajero ? 'checked' : ''}>
-                <label class="form-check-label">Folder Viajero</label>
-            </div>
-
-            <div class="form-group">
-                <label>Observaciones</label>
-                <textarea class="form-control" name="observaciones_checklist">${c.observaciones_checklist || ''}</textarea>
-            </div>
-
-            <div class="form-group">
-                <label>Recibido por</label>
-                <input type="text" class="form-control" name="recibido_por" value="${c.recibido_por || ''}">
-            </div>
-
-            <div class="form-group">
-                <label>Fecha Revisión</label>
-                <input type="date" class="form-control" name="fecha_revision" value="${c.fecha_revision || ''}">
-            </div>
-        `;
-    }
-
-    btnCargar.addEventListener('click', function (e) {
-        e.preventDefault();
-
-        let vin = document.getElementById('vin').value;
-        if (!vin) {
-            alert("Ingrese un VIN");
-            return;
-        }
-
-        fetch(`/admin/salidas/vehiculo/${vin}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    alert(data.error);
-                    return;
-                }
-
-                // 🚗 Rellenar campos del vehículo
-                document.querySelector("input[name='Motor']").value = data.vehiculo.Motor || '';
-                document.querySelector("input[name='Caracteristicas']").value = data.vehiculo.Caracteristicas || '';
-                document.querySelector("input[name='Color']").value = data.vehiculo.Color || '';
-                document.querySelector("input[name='Modelo']").value = data.vehiculo.Modelo || '';
-
-                // 📝 Checklist info dinámico
-                if (data.checklist) {
-                    checklistContainer.innerHTML = renderChecklist(data.checklist);
-                } else {
-                    checklistContainer.innerHTML = `<p>No hay checklist previo. Se creará uno nuevo al guardar.</p>`;
-                }
-            })
-            .catch(error => console.error("Error:", error));
-    });
-});
-</script>
-@endsection
-
-@section('js')
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const btnCargar = document.getElementById('btn-cargar');
-    const checklistContainer = document.getElementById("checklist-container");
-    const input = document.getElementById('buscarVin');
-    const resultados = document.getElementById('resultadosVin');
-
-    // 🔍 AUTOCOMPLETAR VIN
-    input.addEventListener('keyup', function() {
-        const query = this.value.trim();
-        if (query.length < 3) {
-            resultados.innerHTML = '';
-            return;
-        }
-
-        fetch(`/buscar-vin?query=${encodeURIComponent(query)}`)
-            .then(response => response.json())
-            .then(data => {
-                resultados.innerHTML = '';
-                if (data.length > 0) {
-                    data.forEach(v => {
-                        const item = document.createElement('a');
-                        item.href = "#";
-                        item.classList.add('list-group-item', 'list-group-item-action');
-                        item.textContent = `${v.VIN} - ${v.Modelo} (${v.Color})`;
-
-                        item.addEventListener('click', function(e) {
-                            e.preventDefault();
-                            input.value = v.VIN;
-                            resultados.innerHTML = '';
-                        });
-
-                        resultados.appendChild(item);
-                    });
-                } else {
-                    resultados.innerHTML = '<div class="list-group-item text-muted">Sin resultados</div>';
-                }
-            })
-            .catch(err => console.error(err));
-    });
-
-    // Ocultar sugerencias al hacer clic fuera
-    document.addEventListener('click', function(e) {
-        if (!input.contains(e.target)) {
-            resultados.innerHTML = '';
-        }
-    });
-
-    // 🚗 BOTÓN CARGAR DATOS
-    btnCargar.addEventListener('click', function (e) {
-        e.preventDefault();
-
-        let vin = document.getElementById('buscarVin').value; // ✅ corregido
-        if (!vin) {
-            alert("Ingrese un VIN");
-            return;
-        }
-
-        fetch(`/admin/salidas/vehiculo/${vin}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    alert(data.error);
-                    return;
-                }
-
-                // Rellenar datos
-                document.querySelector("input[name='Motor']").value = data.vehiculo.Motor || '';
-                document.querySelector("input[name='Caracteristicas']").value = data.vehiculo.Caracteristicas || '';
-                document.querySelector("input[name='Color']").value = data.vehiculo.Color || '';
-                document.querySelector("input[name='Modelo']").value = data.vehiculo.Modelo || '';
-
-                // Checklist dinámico
-                if (data.checklist) {
-                    checklistContainer.innerHTML = renderChecklist(data.checklist);
-                } else {
-                    checklistContainer.innerHTML = `<p>No hay checklist previo. Se creará uno nuevo al guardar.</p>`;
-                }
-            })
-            .catch(error => console.error("Error:", error));
-    });
-
-    function renderChecklist(c) {
-        return `
-            <input type="hidden" name="documentos_completos" value="0">
-            <div class="form-check mb-2">
-                <input class="form-check-input" type="checkbox" name="documentos_completos" value="1" ${c.documentos_completos ? 'checked' : ''}>
-                <label class="form-check-label">Documentos Completos</label>
-            </div>
-            ...
-        `;
-    }
-});
-</script>
-@stop --}}

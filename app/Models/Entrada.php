@@ -49,8 +49,6 @@ public function almacenSalida()
     return $this->belongsTo(Almacen::class, 'Almacen_salida', 'Id_Almacen');
 }
 
-  
-
 
 
 }
